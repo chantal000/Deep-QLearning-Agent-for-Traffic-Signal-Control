@@ -16,8 +16,9 @@ PHASE_EWL_YELLOW = 7
 
 
 class Simulation:
-    def __init__(self, Model, Memory, TrafficGen, sumo_cmd, gamma, max_steps, green_duration, yellow_duration, num_states, num_actions, training_epochs):
+    def __init__(self, Model, TargetModel, Memory, TrafficGen, sumo_cmd, gamma, max_steps, green_duration, yellow_duration, num_states, num_actions, training_epochs, copy_step):
         self._Model = Model
+        self._TargetModel = TargetModel
         self._Memory = Memory
         self._TrafficGen = TrafficGen
         self._gamma = gamma
@@ -32,11 +33,12 @@ class Simulation:
         self._cumulative_wait_store = []
         self._avg_queue_length_store = []
         self._training_epochs = training_epochs
+        self._copy_step = copy_step
 
 
     def run(self, episode, epsilon):
         """
-        Runs an episode of simulation, then starts a training session
+        Runs an episode of simulation, then starts a training session 
         """
         start_time = timeit.default_timer()
 
@@ -95,10 +97,25 @@ class Simulation:
         traci.close()
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
+
+        # start training after the full episode is done
         print("Training...")
         start_time = timeit.default_timer()
-        for _ in range(self._training_epochs):
+        train_iteration = 0
+        
+        #train for "training epochs" times --> only updates the online Model (target model stays unchanged)
+        for _ in range(self._training_epochs):   #epoch = one forward pass and one backward pass of all the training examples, in the neural network terminology. 
+            #start one training round
             self._replay()
+            
+            train_iteration += 1
+            if train_iteration % self._copy_step == 0:
+                # self._Model.train_batch(x, y)
+                self._copy_online_into_target_model()
+                print(" Model updated at step ", str(train_iteration)) 
+            
+            
+            
         training_time = round(timeit.default_timer() - start_time, 1)
 
         return simulation_time, training_time
@@ -254,7 +271,7 @@ class Simulation:
 
     def _replay(self):
         """
-        Retrieve a group of samples from the memory and for each of them update the learning equation, then train
+        Retrieve a group of samples from the memory and for each of them update the learning equation, then train 
         """
         batch = self._Memory.get_samples(self._Model.batch_size)
 
@@ -264,20 +281,29 @@ class Simulation:
 
             # prediction
             q_s_a = self._Model.predict_batch(states)  # predict Q(state), for every sample
-            q_s_a_d = self._Model.predict_batch(next_states)  # predict Q(next_state), for every sample
+            q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state), for every sample
 
             # setup training arrays
-            x = np.zeros((len(batch), self._num_states))
-            y = np.zeros((len(batch), self._num_actions))
+            x = np.zeros((len(batch), self._num_states)) #from online network
+            y = np.zeros((len(batch), self._num_actions))  #from target network
 
             for i, b in enumerate(batch):
                 state, action, reward, _ = b[0], b[1], b[2], b[3]  # extract data from one sample
                 current_q = q_s_a[i]  # get the Q(state) predicted before
+                
+                #update with combination of online and target network
                 current_q[action] = reward + self._gamma * np.amax(q_s_a_d[i])  # update Q(state, action)
                 x[i] = state
                 y[i] = current_q  # Q(state) that includes the updated action value
 
             self._Model.train_batch(x, y)  # train the NN
+            
+     
+    def _copy_online_into_target_model(self):
+        """
+        Copy weights from the online model into the targetModel
+        """
+        self._TargetModel._model.set_weights(self._Model._model.get_weights()) 
 
 
     def _save_episode_stats(self):

@@ -8,7 +8,7 @@ class TrafficGenerator:
 
     def generate_routefile(self, seed):
         """
-        Generation of the route of every car for one episode
+        Generation of the route of every car for one episode 
         """
         np.random.seed(seed)  # make tests reproducible
 

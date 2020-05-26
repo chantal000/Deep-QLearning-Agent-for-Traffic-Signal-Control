@@ -25,15 +25,24 @@ class TrainModel:
         """
         Build and compile a fully connected deep neural network
         """
+        #input layer
         inputs = keras.Input(shape=(self._input_dim,))
+        
+        # middle layers
         x = layers.Dense(width, activation='relu')(inputs)
         for _ in range(num_layers):
             x = layers.Dense(width, activation='relu')(x)
+        
+        #output layer
         outputs = layers.Dense(self._output_dim, activation='linear')(x)
 
         model = keras.Model(inputs=inputs, outputs=outputs, name='my_model')
         model.compile(loss=losses.mean_squared_error, optimizer=Adam(lr=self._learning_rate))
         return model
+    
+    
+
+    
     
 
     def predict_one(self, state):
