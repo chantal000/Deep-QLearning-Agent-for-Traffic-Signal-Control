@@ -112,7 +112,7 @@ class Simulation:
             if train_iteration % self._copy_step == 0:
                 # self._Model.train_batch(x, y)
                 self._copy_online_into_target_model()
-                print(" Model updated at step ", str(train_iteration)) 
+                # print(" Model updated at step ", str(train_iteration)) 
             
             
             
@@ -269,6 +269,7 @@ class Simulation:
         return state
 
 
+
     def _replay(self):
         """
         Retrieve a group of samples from the memory and for each of them update the learning equation, then train 
@@ -297,6 +298,7 @@ class Simulation:
                 y[i] = current_q  # Q(state) that includes the updated action value
 
             self._Model.train_batch(x, y)  # train the NN
+            
             
      
     def _copy_online_into_target_model(self):

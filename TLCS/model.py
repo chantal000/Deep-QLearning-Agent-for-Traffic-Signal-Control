@@ -38,6 +38,9 @@ class TrainModel:
 
         model = keras.Model(inputs=inputs, outputs=outputs, name='my_model')
         model.compile(loss=losses.mean_squared_error, optimizer=Adam(lr=self._learning_rate))
+        
+        # model.summary()
+        
         return model
     
     
