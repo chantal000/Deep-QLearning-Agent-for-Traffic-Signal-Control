@@ -34,6 +34,7 @@ class Simulation:
         self._avg_queue_length_store = []
         self._training_epochs = training_epochs
         self._copy_step = copy_step
+        
 
 
     def run(self, episode, epsilon):
@@ -56,6 +57,20 @@ class Simulation:
         old_total_wait = 0
         old_state = -1
         old_action = -1
+        
+        
+        # current_state = self._get_state()
+        # # print(current_state)
+        # print("state shape: ", str(current_state.shape))
+        
+        # current_total_wait = self._collect_waiting_times()
+        # reward = old_total_wait - current_total_wait
+        
+
+        # self._Memory.add_sample((old_state, old_action, reward, current_state))
+        
+        
+        
 
         while self._step < self._max_steps:
 
@@ -203,7 +218,12 @@ class Simulation:
         """
         Retrieve the state of the intersection from sumo, in the form of cell occupancy
         """
-        state = np.zeros(self._num_states)
+        
+        
+        
+        
+        state = np.zeros((self._Model._number_cells_per_lane, 8, 1))
+        # state = np.zeros(self._num_states)  #old, to be deleted later
         car_list = traci.vehicle.getIDList()
 
         for car_id in car_list:
@@ -254,17 +274,24 @@ class Simulation:
             else:
                 lane_group = -1
 
-            if lane_group >= 1 and lane_group <= 7:
-                car_position = int(str(lane_group) + str(lane_cell))  # composition of the two postion ID to create a number in interval 0-79
-                valid_car = True
-            elif lane_group == 0:
-                car_position = lane_cell
-                valid_car = True
-            else:
-                valid_car = False  # flag for not detecting cars crossing the intersection or driving away from it
+            # if lane_group >= 1 and lane_group <= 7:
+                # car_position = int(str(lane_group) + str(lane_cell))  # composition of the two postion ID to create a number in interval 0-79
+                # valid_car = True
+            # elif lane_group == 0:
+                # car_position = lane_cell
+                # valid_car = True
+            # else:
+                # valid_car = False  # flag for not detecting cars crossing the intersection or driving away from it
 
-            if valid_car:
-                state[car_position] = 1  # write the position of the car car_id in the state array in the form of "cell occupied"
+            # if valid_car:
+                # state[car_position] = 1  # write the position of the car car_id in the state array in the form of "cell occupied"
+
+            if lane_group >= 0:  #if car is a valid car (on approach, so not crossing intersection or driving away from it)
+                state[lane_cell][lane_group][0] = 1 #there is a car in the specified cell
+
+
+
+
 
         return state
 
@@ -275,17 +302,22 @@ class Simulation:
         Retrieve a group of samples from the memory and for each of them update the learning equation, then train 
         """
         batch = self._Memory.get_samples(self._Model.batch_size)
+        
+        
 
         if len(batch) > 0:  # if the memory is full enough
             states = np.array([val[0] for val in batch])  # extract states from the batch
             next_states = np.array([val[3] for val in batch])  # extract next states from the batch
+
+            # print(" shape of states and next_states in _replay: ", states.shape, next_states.shape)
+
 
             # prediction
             q_s_a = self._Model.predict_batch(states)  # predict Q(state), for every sample
             q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state), for every sample
 
             # setup training arrays
-            x = np.zeros((len(batch), self._num_states)) #from online network
+            x = np.zeros((len(batch), self._Model._number_cells_per_lane, 8, 1)) #from online network
             y = np.zeros((len(batch), self._num_actions))  #from target network
 
             for i, b in enumerate(batch):

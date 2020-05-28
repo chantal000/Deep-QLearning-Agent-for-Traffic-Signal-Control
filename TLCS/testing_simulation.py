@@ -46,6 +46,8 @@ class Simulation:
         self._waiting_times = {}
         old_total_wait = 0
         old_action = -1 # dummy init
+        
+       
 
         while self._step < self._max_steps:
 
@@ -75,7 +77,7 @@ class Simulation:
 
             self._reward_episode.append(reward)
 
-        #print("Total reward:", np.sum(self._reward_episode))
+        print("Total reward:", np.sum(self._reward_episode))
         traci.close()
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
@@ -162,7 +164,10 @@ class Simulation:
         """
         Retrieve the state of the intersection from sumo, in the form of cell occupancy
         """
-        state = np.zeros(self._num_states)
+        number_cells_per_lane = 10
+        
+        
+        state = np.zeros((self._Model._number_cells_per_lane, 8, 1))
         car_list = traci.vehicle.getIDList()
 
         for car_id in car_list:
@@ -213,20 +218,26 @@ class Simulation:
             else:
                 lane_group = -1
 
-            if lane_group >= 1 and lane_group <= 7:
-                car_position = int(str(lane_group) + str(lane_cell))  # composition of the two postion ID to create a number in interval 0-79
-                valid_car = True
-            elif lane_group == 0:
-                car_position = lane_cell
-                valid_car = True
-            else:
-                valid_car = False  # flag for not detecting cars crossing the intersection or driving away from it
+            
+            
+            # if lane_group >= 1 and lane_group <= 7:
+                # car_position = int(str(lane_group) + str(lane_cell))  # composition of the two postion ID to create a number in interval 0-79
+                # valid_car = True
+            # elif lane_group == 0:
+                # car_position = lane_cell
+                # valid_car = True
+            # else:
+                # valid_car = False  # flag for not detecting cars crossing the intersection or driving away from it
 
-            if valid_car:
-                state[car_position] = 1  # write the position of the car car_id in the state array in the form of "cell occupied"
+            # if valid_car:
+                # state[car_position] = 1  # write the position of the car car_id in the state array in the form of "cell occupied"
 
+            if lane_group >= 0:  #if car is a valid car (on approach, so not crossing intersection or driving away from it)
+                state[lane_cell][lane_group][0] = 1 #there is a car in the specified cell
+
+                
         return state
-
+            
 
     @property
     def queue_length_episode(self):

@@ -14,7 +14,8 @@ from tensorflow.keras.models import load_model
 
 class TrainModel:
     def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim):
-        self._input_dim = input_dim
+        self._input_dim = input_dim  #old, should be deleted everywhere + code adjusted + config changed
+        self._number_cells_per_lane = 10
         self._output_dim = output_dim
         self._batch_size = batch_size
         self._learning_rate = learning_rate
@@ -25,21 +26,48 @@ class TrainModel:
         """
         Build and compile a fully connected deep neural network
         """
+        
+        input_shape = (self._number_cells_per_lane, 8, 1)
+        
+        
         #input layer
-        inputs = keras.Input(shape=(self._input_dim,))
+        inputs = keras.Input(shape = input_shape)
+                
+        #convolutional layers
+        c1 = layers.Conv2D(filters = 128, kernel_size = 4, strides = (2,2), padding = "same", activation = 'relu')(inputs)
+        c2 = layers.Conv2D(filters = 128, kernel_size = 4, strides = (2,2), padding = "same", activation = 'relu')(c1)
+        c3 = layers.Conv2D(filters = 64, kernel_size = 2, strides = (1,1), padding = "same", activation = 'relu')(c2)
+        flat = layers.Flatten()(c3)
+        dense = layers.Dense(self._output_dim, activation='linear')(flat)
         
-        # middle layers
-        x = layers.Dense(width, activation='relu')(inputs)
-        for _ in range(num_layers):
-            x = layers.Dense(width, activation='relu')(x)
-        
-        #output layer
-        outputs = layers.Dense(self._output_dim, activation='linear')(x)
-
-        model = keras.Model(inputs=inputs, outputs=outputs, name='my_model')
+        model = keras.Model(inputs = inputs, outputs = dense, name='simple_CNN')
         model.compile(loss=losses.mean_squared_error, optimizer=Adam(lr=self._learning_rate))
         
-        # model.summary()
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        # #input layer
+        # inputs = keras.Input(shape=(self._input_dim,))
+        
+        # # middle layers
+        # x = layers.Dense(width, activation='relu')(inputs)
+        # for _ in range(num_layers):
+            # x = layers.Dense(width, activation='relu')(x)
+        
+        # #output layer
+        # outputs = layers.Dense(self._output_dim, activation='linear')(x)
+
+        # model = keras.Model(inputs=inputs, outputs=outputs, name='my_model')
+        # model.compile(loss=losses.mean_squared_error, optimizer=Adam(lr=self._learning_rate))
+        
+        # # model.summary()
         
         return model
     
@@ -52,7 +80,8 @@ class TrainModel:
         """
         Predict the action values from a single state
         """
-        state = np.reshape(state, [1, self._input_dim])
+        # state = np.reshape(state, [1, self._input_dim])
+        state = np.expand_dims(state, axis = 0)
         return self._model.predict(state)
 
 
@@ -60,6 +89,8 @@ class TrainModel:
         """
         Predict the action values from a batch of states
         """
+        # print("in predict_batch, shape of states: ", states.shape)
+        
         return self._model.predict(states)
 
 
@@ -96,6 +127,7 @@ class TrainModel:
 class TestModel:
     def __init__(self, input_dim, model_path):
         self._input_dim = input_dim
+        self._number_cells_per_lane = 10
         self._model = self._load_my_model(model_path)
 
 
@@ -116,7 +148,7 @@ class TestModel:
         """
         Predict the action values from a single state
         """
-        state = np.reshape(state, [1, self._input_dim])
+        state = np.expand_dims(state, axis = 0)
         return self._model.predict(state)
 
 
