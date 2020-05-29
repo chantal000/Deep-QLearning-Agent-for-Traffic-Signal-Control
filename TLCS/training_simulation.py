@@ -222,7 +222,9 @@ class Simulation:
         
         
         
-        state = np.zeros((self._Model._number_cells_per_lane, 8, 1))
+        
+        state = np.zeros(self._Model._input_shape)
+        
         # state = np.zeros(self._num_states)  #old, to be deleted later
         car_list = traci.vehicle.getIDList()
 
@@ -317,7 +319,7 @@ class Simulation:
             q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state), for every sample
 
             # setup training arrays
-            x = np.zeros((len(batch), self._Model._number_cells_per_lane, 8, 1)) #from online network
+            x = np.zeros((len(batch), ) + self._Model._input_shape) #from online network
             y = np.zeros((len(batch), self._num_actions))  #from target network
 
             for i, b in enumerate(batch):

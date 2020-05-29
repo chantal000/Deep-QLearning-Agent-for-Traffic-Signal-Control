@@ -164,10 +164,9 @@ class Simulation:
         """
         Retrieve the state of the intersection from sumo, in the form of cell occupancy
         """
-        number_cells_per_lane = 10
         
         
-        state = np.zeros((self._Model._number_cells_per_lane, 8, 1))
+        state = np.zeros(self._Model._input_shape)
         car_list = traci.vehicle.getIDList()
 
         for car_id in car_list:

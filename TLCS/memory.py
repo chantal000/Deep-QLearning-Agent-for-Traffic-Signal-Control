@@ -7,6 +7,18 @@ class Memory:
         self._size_min = size_min
 
 
+    def _size_now(self):
+        """
+        Check how full the memory is
+        """
+        return len(self._samples)
+        
+        
+        
+
+
+
+class NormalMemory(Memory):
     def add_sample(self, sample):
         """
         Add a sample into the memory
@@ -29,8 +41,21 @@ class Memory:
             return random.sample(self._samples, n)  # get "batch size" number of samples
 
 
-    def _size_now(self):
-        """
-        Check how full the memory is
-        """
-        return len(self._samples)
+
+
+
+
+class SequenceMemory(Memory):
+    pass
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
