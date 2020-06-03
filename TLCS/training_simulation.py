@@ -15,7 +15,7 @@ PHASE_EWL_GREEN = 6  # action 3 code 11
 PHASE_EWL_YELLOW = 7
 
 
-class Simulation:
+class TrainSimulation:
     def __init__(self, Model, TargetModel, Memory, TrafficGen, sumo_cmd, gamma, max_steps, green_duration, yellow_duration, num_states, num_actions, training_epochs, copy_step):
         self._Model = Model
         self._TargetModel = TargetModel
@@ -84,7 +84,13 @@ class Simulation:
 
             # saving the data into the memory
             if self._step != 0:
-                self._Memory.add_sample((old_state, old_action, reward, current_state))
+                if isinstance(_Memory, NormalMemory):
+                    self._Memory.add_sample((old_state, old_action, reward, current_state))
+                elif isinstance(_Memory, SequenceMemory):
+                    self._Memory.add_to_buffer((old_state, old_action, reward, current_state))
+                else:
+                    print("Wrong type of memory")
+                    
 
             # choose the light phase to activate, based on the current state of the intersection
             action = self._choose_action(current_state, epsilon)
@@ -110,6 +116,11 @@ class Simulation:
         self._save_episode_stats()
         print("Total reward:", self._sum_neg_reward, "- Epsilon:", round(epsilon, 2))
         traci.close()
+        
+        #now add collected sequence to memory (only if RNN/sequence memory is used)
+        if isinstance(_Memory, SequenceMemory):
+                    self._Memory.add_sequence()
+        
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
 
@@ -291,10 +302,6 @@ class Simulation:
             if lane_group >= 0:  #if car is a valid car (on approach, so not crossing intersection or driving away from it)
                 state[lane_cell][lane_group][0] = 1 #there is a car in the specified cell
 
-
-
-
-
         return state
 
 
@@ -364,4 +371,50 @@ class Simulation:
     @property
     def avg_queue_length_store(self):
         return self._avg_queue_length_store
+
+
+
+
+
+
+class VanillaTrainSimulation(TrainSimulation):
+    pass
+    
+    
+    
+class RNNTrainSimulation(TrainSimulation):
+    def _replay(self):
+        """
+        Retrieve a group of samples from the memory and for each of them update the learning equation, then train 
+        """
+        batch = self._Memory.get_samples(self._Model.batch_size)  #batch is a list of sequences of experiences (each item has length sequence_length)
+        
+        
+
+        if len(batch) > 0:  # if the memory is full enough
+            states = np.array([val[0] for val in batch])  # extract states from the batch
+            next_states = np.array([val[3] for val in batch])  # extract next states from the batch
+
+            # print(" shape of states and next_states in _replay: ", states.shape, next_states.shape)
+
+
+            # prediction
+            q_s_a = self._Model.predict_batch(states)  # predict Q(state), for every sample
+            q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state), for every sample
+
+            # setup training arrays
+            x = np.zeros((len(batch), ) + self._Model._input_shape) #from online network
+            y = np.zeros((len(batch), self._num_actions))  #from target network
+
+            for i, b in enumerate(batch):
+                state, action, reward, _ = b[0], b[1], b[2], b[3]  # extract data from one sample
+                current_q = q_s_a[i]  # get the Q(state) predicted before
+                
+                #update with combination of online and target network
+                current_q[action] = reward + self._gamma * np.amax(q_s_a_d[i])  # update Q(state, action)
+                x[i] = state
+                y[i] = current_q  # Q(state) that includes the updated action value
+
+            self._Model.train_batch(x, y)  # train the NN
+
 

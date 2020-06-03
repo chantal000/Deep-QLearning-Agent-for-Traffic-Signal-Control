@@ -109,9 +109,9 @@ class VanillaTrainModel(TrainModel):
  
  
 class RNNTrainModel(TrainModel):
-    def __init__(self, sequence_length):
-        super().__init__()
+    def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim, input_shape, sequence_length):
         self._sequence_length = sequence_length
+        super().__init__(num_layers, width, batch_size, learning_rate, input_dim, output_dim, input_shape)
     
     
     def _build_model(self, num_layers, width):
@@ -130,7 +130,7 @@ class RNNTrainModel(TrainModel):
         c2 = layers.TimeDistributed(layers.Conv2D(filters = 128, kernel_size = 4, strides = (2,2), padding = "same", activation = 'relu'))(c1)
         c3 = layers.TimeDistributed(layers.Conv2D(filters = 64, kernel_size = 2, strides = (1,1), padding = "same", activation = 'relu'))(c2)
         flat = layers.TimeDistributed(layers.Flatten())(c3)
-        lstm = layers.LSTM(384, activation='tanh')(flat)
+        lstm = layers.LSTM(96, activation='tanh')(flat)
         dense = layers.Dense(16, activation='relu')(lstm)
         outputs = layers.Dense(self._output_dim, activation='linear')(dense)
         
