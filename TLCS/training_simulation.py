@@ -4,6 +4,8 @@ import random
 import timeit
 import os
 
+from memory import Memory, NormalMemory, SequenceMemory
+
 # phase codes based on environment.net.xml
 PHASE_NS_GREEN = 0  # action 0 code 00
 PHASE_NS_YELLOW = 1
@@ -59,16 +61,6 @@ class TrainSimulation:
         old_action = -1
         
         
-        # current_state = self._get_state()
-        # # print(current_state)
-        # print("state shape: ", str(current_state.shape))
-        
-        # current_total_wait = self._collect_waiting_times()
-        # reward = old_total_wait - current_total_wait
-        
-
-        # self._Memory.add_sample((old_state, old_action, reward, current_state))
-        
         
         
 
@@ -84,9 +76,9 @@ class TrainSimulation:
 
             # saving the data into the memory
             if self._step != 0:
-                if isinstance(_Memory, NormalMemory):
+                if isinstance(self._Memory, NormalMemory):
                     self._Memory.add_sample((old_state, old_action, reward, current_state))
-                elif isinstance(_Memory, SequenceMemory):
+                elif isinstance(self._Memory, SequenceMemory):
                     self._Memory.add_to_buffer((old_state, old_action, reward, current_state))
                 else:
                     print("Wrong type of memory")
@@ -118,7 +110,7 @@ class TrainSimulation:
         traci.close()
         
         #now add collected sequence to memory (only if RNN/sequence memory is used)
-        if isinstance(_Memory, SequenceMemory):
+        if isinstance(self._Memory, SequenceMemory):
                     self._Memory.add_sequence()
         
         simulation_time = round(timeit.default_timer() - start_time, 1)
@@ -230,11 +222,7 @@ class TrainSimulation:
         Retrieve the state of the intersection from sumo, in the form of cell occupancy
         """
         
-        
-        
-        
-        
-        state = np.zeros(self._Model._input_shape)
+        state = np.zeros(self._Model._state_shape)
         
         # state = np.zeros(self._num_states)  #old, to be deleted later
         car_list = traci.vehicle.getIDList()
@@ -322,11 +310,11 @@ class TrainSimulation:
 
 
             # prediction
-            q_s_a = self._Model.predict_batch(states)  # predict Q(state), for every sample
-            q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state), for every sample
+            q_s_a = self._Model.predict_batch(states)  # predict Q(state, action), for every sample
+            q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state, action), for every sample
 
             # setup training arrays
-            x = np.zeros((len(batch), ) + self._Model._input_shape) #from online network
+            x = np.zeros((len(batch), ) + self._Model._state_shape) #from online network
             y = np.zeros((len(batch), self._num_actions))  #from target network
 
             for i, b in enumerate(batch):
@@ -382,7 +370,28 @@ class VanillaTrainSimulation(TrainSimulation):
     
     
     
+    
+    
+    
+    
 class RNNTrainSimulation(TrainSimulation):
+    def _choose_action(self, state, epsilon):
+        """
+        Decide wheter to perform an explorative or exploitative action, according to an epsilon-greedy policy (adjusted for recurrent network)
+        """
+        # print("state before expanding dims in _choose_action: ", state.shape)
+        if random.random() < epsilon:
+            return random.randint(0, self._num_actions - 1) # random action
+        else:
+            state = np.expand_dims(state, axis = 0)
+            # print("state after expanding dims in _choose_action: ", state.shape)
+            return np.argmax(self._Model.predict_one(state)) # the best action given the current state
+    
+    
+ 
+    
+    
+    
     def _replay(self):
         """
         Retrieve a group of samples from the memory and for each of them update the learning equation, then train 
@@ -391,30 +400,58 @@ class RNNTrainSimulation(TrainSimulation):
         
         
 
-        if len(batch) > 0:  # if the memory is full enough
-            states = np.array([val[0] for val in batch])  # extract states from the batch
-            next_states = np.array([val[3] for val in batch])  # extract next states from the batch
+        if len(batch) > 0:  # if the memory is full enough          
+            states = []
+            next_states = []
+            
+            for index_sequence, sequence in enumerate(batch):
+                states.append( np.array([val[0] for val in sequence]) )
+                next_states.append( np.array([val[3] for val in sequence]) )
 
-            # print(" shape of states and next_states in _replay: ", states.shape, next_states.shape)
-
-
+            states = np.asarray(states)
+            next_states = np.asarray(next_states)
+            # print("states shape: ", states.shape, "next states shape: ", next_states.shape )
+            
             # prediction
             q_s_a = self._Model.predict_batch(states)  # predict Q(state), for every sample
             q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state), for every sample
 
+            # print("q_s_a shape: ", q_s_a.shape)
+            
+            
             # setup training arrays
-            x = np.zeros((len(batch), ) + self._Model._input_shape) #from online network
-            y = np.zeros((len(batch), self._num_actions))  #from target network
+            x = np.zeros((len(batch), self._Model._sequence_length ) + self._Model._state_shape) #from online network
+            y = np.zeros((len(batch), self._Model._sequence_length, self._num_actions))  #from target network
+            
 
-            for i, b in enumerate(batch):
-                state, action, reward, _ = b[0], b[1], b[2], b[3]  # extract data from one sample
-                current_q = q_s_a[i]  # get the Q(state) predicted before
+            # for i, b in enumerate(batch):
+                # state, action, reward, _ = b[0], b[1], b[2], b[3]  # extract data from one sample
+                # current_q = q_s_a[i]  # get the Q(state) predicted before
                 
-                #update with combination of online and target network
-                current_q[action] = reward + self._gamma * np.amax(q_s_a_d[i])  # update Q(state, action)
-                x[i] = state
-                y[i] = current_q  # Q(state) that includes the updated action value
+                # #update with combination of online and target network
+                # current_q[action] = reward + self._gamma * np.amax(q_s_a_d[i])  # update Q(state, action)
+                # x[i] = state
+                # y[i] = current_q  # Q(state) that includes the updated action value
 
-            self._Model.train_batch(x, y)  # train the NN
+            # self._Model.train_batch(x, y)  # train the NN
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

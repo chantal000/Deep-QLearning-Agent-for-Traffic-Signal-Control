@@ -32,7 +32,7 @@ class NormalMemory(Memory):
         if n > self._size_now():
             return random.sample(self._samples, self._size_now())  # get all the samples
         else:
-            return random.sample(self._samples, n)  # get "batch size" number of samples
+            return random.choices(self._samples, k=n)  # get "batch size" number of samples
 
 
     def _size_now(self):
@@ -86,7 +86,7 @@ class SequenceMemory(Memory):
 
     def get_samples(self, batch_size): #TO DO
         """
-        Get n samples randomly from the memory
+        Get batch_size samples randomly from the memory
         """
         if self._size_now() < self._size_min:
             return []
