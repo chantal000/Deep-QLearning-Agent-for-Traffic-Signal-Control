@@ -29,8 +29,6 @@ class Simulation:
         self._yellow_duration = yellow_duration
         self._num_actions = num_actions
         
-    
-    
 
     def _collect_waiting_times(self):
         """
@@ -604,12 +602,18 @@ class TestSimulation(Simulation):
 
         return simulation_time
 
-    
     def _choose_action(self, state):
         """
         Pick the best action known based on the current state of the env
         """
-        return np.argmax(self._Model.predict_one(state))
+        
+        #expand dimension if it is a recurrent model (requires number of time steps, here = 1)
+        if len(self._Model._model.layers[0].input.shape) > len(self._Model._state_shape)+1:
+            state = np.expand_dims(state, axis = 0)
+        
+        return np.argmax(self._Model.predict_one(state)) # the best action given the current state
+    
+    
 
 
     @property
@@ -620,11 +624,5 @@ class TestSimulation(Simulation):
     @property
     def reward_episode(self):
         return self._reward_episode
-
-
-
-
-
-
 
 
