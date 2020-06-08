@@ -166,7 +166,7 @@ class Simulation:
         """
         
         
-        state = np.zeros(self._Model._input_shape)
+        state = np.zeros(self._Model._state_shape)
         car_list = traci.vehicle.getIDList()
 
         for car_id in car_list:
