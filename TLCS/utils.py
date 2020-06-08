@@ -18,14 +18,12 @@ def import_train_configuration(config_file):
     config['green_duration'] = content['simulation'].getint('green_duration')
     config['yellow_duration'] = content['simulation'].getint('yellow_duration')
     config['copy_step'] = content['simulation'].getint('copy_step')
-    config['num_layers'] = content['model'].getint('num_layers')
-    config['width_layers'] = content['model'].getint('width_layers')
     config['batch_size'] = content['model'].getint('batch_size')
     config['learning_rate'] = content['model'].getfloat('learning_rate')
     config['training_epochs'] = content['model'].getint('training_epochs')
+    config['uses_reccurent_network'] = content['model'].getboolean('uses_reccurent_network')
     config['memory_size_min'] = content['memory'].getint('memory_size_min')
     config['memory_size_max'] = content['memory'].getint('memory_size_max')
-    config['num_states'] = content['agent'].getint('num_states')
     config['num_actions'] = content['agent'].getint('num_actions')
     config['gamma'] = content['agent'].getfloat('gamma')
     config['models_path_name'] = content['dir']['models_path_name']
@@ -46,7 +44,6 @@ def import_test_configuration(config_file):
     config['episode_seed'] = content['simulation'].getint('episode_seed')
     config['green_duration'] = content['simulation'].getint('green_duration')
     config['yellow_duration'] = content['simulation'].getint('yellow_duration')
-    config['num_states'] = content['agent'].getint('num_states')
     config['num_actions'] = content['agent'].getint('num_actions')
     config['sumocfg_file_name'] = content['dir']['sumocfg_file_name']
     config['models_path_name'] = content['dir']['models_path_name']

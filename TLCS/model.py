@@ -18,13 +18,11 @@ from tensorflow.keras.models import load_model
 
 
 class TrainModel:
-    def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim, state_shape):
-        self._input_dim = input_dim  #old, should be deleted everywhere + code adjusted + config changed
+    def __init__(self, batch_size, learning_rate, output_dim, state_shape):
         self._state_shape = state_shape
         self._output_dim = output_dim
         self._batch_size = batch_size
         self._learning_rate = learning_rate
-        # self._model = self._build_model(num_layers, width)
         
     def predict_one(self, state):
         """
@@ -59,11 +57,6 @@ class TrainModel:
 
 
     @property
-    def input_dim(self):
-        return self._input_dim
-
-
-    @property
     def output_dim(self):
         return self._output_dim
 
@@ -77,13 +70,13 @@ class TrainModel:
 
 
 class VanillaTrainModel(TrainModel):
-    def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim, state_shape):
-        super().__init__(num_layers, width, batch_size, learning_rate, input_dim, output_dim, state_shape)
-        self._model = self._build_model(num_layers, width)
+    def __init__(self, batch_size, learning_rate, output_dim, state_shape):
+        super().__init__(batch_size, learning_rate, output_dim, state_shape)
+        self._model = self._build_model()
         
     
     
-    def _build_model(self, num_layers, width):
+    def _build_model(self):
         """
         Build and compile a convolutional deep neural network
         """
@@ -117,36 +110,29 @@ class VanillaTrainModel(TrainModel):
  
  
 class RNNTrainModel(TrainModel):
-    def __init__(self, num_layers, width, batch_size, learning_rate, input_dim, output_dim, state_shape, sequence_length, statefulness):
+    def __init__(self, batch_size, learning_rate, output_dim, state_shape, sequence_length, statefulness):
         self._sequence_length = sequence_length
         self._statefulness = statefulness
-        super().__init__(num_layers, width, batch_size, learning_rate, input_dim, output_dim, state_shape)
-        self._model = self._build_model(num_layers, width)
+        super().__init__(batch_size, learning_rate, output_dim, state_shape)
+        self._model = self._build_model()
     
     
-    def _build_model(self, num_layers, width):
+    def _build_model(self):
         """
         Build and compile a deep neural network with convolution as LSTM
         """
         
-        
-        # sequence_input_shape = (self._sequence_length,) + self._state_shape
         sequence_input_shape = (None,) + self._state_shape
         
         
         # if using the predict model, the batch size is fixed to size 1
-        if self._statefulness == False:
-            print("enter not stateful model")
+        if self._statefulness == False: 
             #input layer
             inputs = keras.Input(shape = sequence_input_shape)
         else:
-            print("enter stateful model")
             #input layer
-            # batch_shape = (1,) + sequence_input_shape
             batch_shape = (1,1) + self._state_shape
-            print(batch_shape)
             inputs = keras.Input(batch_shape = batch_shape)
-            print("leave stateful model")
         
         
         #input layer
@@ -180,8 +166,7 @@ class RNNTrainModel(TrainModel):
 
 # TO DO: change input shape if needed
 class TestModel:
-    def __init__(self, input_dim, model_path, state_shape):
-        self._input_dim = input_dim
+    def __init__(self, model_path, state_shape):
         self._model = self._load_my_model(model_path)
         self._state_shape = state_shape
 
@@ -203,10 +188,6 @@ class TestModel:
         """
         Predict the action values from a single state
         """
+
         state = np.expand_dims(state, axis = 0)
         return self._model.predict(state)
-
-
-    @property
-    def input_dim(self):
-        return self._input_dim

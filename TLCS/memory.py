@@ -84,7 +84,7 @@ class SequenceMemory(Memory):
             self._samples.pop(0)  # if the length is greater than the size of memory, remove the oldest element
 
 
-    def get_samples(self, batch_size): #TO DO
+    def get_samples(self, batch_size): 
         """
         Get batch_size samples randomly from the memory
         """
