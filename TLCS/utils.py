@@ -18,6 +18,7 @@ def import_train_configuration(config_file):
     config['green_duration'] = content['simulation'].getint('green_duration')
     config['yellow_duration'] = content['simulation'].getint('yellow_duration')
     config['copy_step'] = content['simulation'].getint('copy_step')
+    config['penetration_rate'] = content['simulation'].getfloat('penetration_rate')
     config['batch_size'] = content['model'].getint('batch_size')
     config['learning_rate'] = content['model'].getfloat('learning_rate')
     config['training_epochs'] = content['model'].getint('training_epochs')
@@ -44,6 +45,7 @@ def import_test_configuration(config_file):
     config['episode_seed'] = content['simulation'].getint('episode_seed')
     config['green_duration'] = content['simulation'].getint('green_duration')
     config['yellow_duration'] = content['simulation'].getint('yellow_duration')
+    config['penetration_rate'] = content['simulation'].getfloat('penetration_rate')
     config['num_actions'] = content['agent'].getint('num_actions')
     config['sumocfg_file_name'] = content['dir']['sumocfg_file_name']
     config['models_path_name'] = content['dir']['models_path_name']

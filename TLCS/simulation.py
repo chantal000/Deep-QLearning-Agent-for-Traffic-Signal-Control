@@ -58,57 +58,61 @@ class Simulation:
         car_list = traci.vehicle.getIDList()
 
         for car_id in car_list:
-            lane_pos = traci.vehicle.getLanePosition(car_id)
-            lane_id = traci.vehicle.getLaneID(car_id)
-            lane_pos = 750 - lane_pos  # inversion of lane pos, so if the car is close to the traffic light -> lane_pos = 0 --- 750 = max len of a road
+            
+            #we can only see connected vehicles locations, so we ignore all regular vehicles
+            if traci.vehicle.getTypeID(car_id) == "connected_vehicle":
+            
+                lane_pos = traci.vehicle.getLanePosition(car_id)
+                lane_id = traci.vehicle.getLaneID(car_id)
+                lane_pos = 750 - lane_pos  # inversion of lane pos, so if the car is close to the traffic light -> lane_pos = 0 --- 750 = max len of a road
 
-            # distance in meters from the traffic light -> mapping into cells
-            if lane_pos < 7:
-                lane_cell = 0
-            elif lane_pos < 14:
-                lane_cell = 1
-            elif lane_pos < 21:
-                lane_cell = 2
-            elif lane_pos < 28:
-                lane_cell = 3
-            elif lane_pos < 40:
-                lane_cell = 4
-            elif lane_pos < 60:
-                lane_cell = 5
-            elif lane_pos < 100:
-                lane_cell = 6
-            elif lane_pos < 160:
-                lane_cell = 7
-            elif lane_pos < 400:
-                lane_cell = 8
-            elif lane_pos <= 750:
-                lane_cell = 9
+                # distance in meters from the traffic light -> mapping into cells
+                if lane_pos < 7:
+                    lane_cell = 0
+                elif lane_pos < 14:
+                    lane_cell = 1
+                elif lane_pos < 21:
+                    lane_cell = 2
+                elif lane_pos < 28:
+                    lane_cell = 3
+                elif lane_pos < 40:
+                    lane_cell = 4
+                elif lane_pos < 60:
+                    lane_cell = 5
+                elif lane_pos < 100:
+                    lane_cell = 6
+                elif lane_pos < 160:
+                    lane_cell = 7
+                elif lane_pos < 400:
+                    lane_cell = 8
+                elif lane_pos <= 750:
+                    lane_cell = 9
 
-            # finding the lane where the car is located 
-            # x2TL_3 are the "turn left only" lanes
-            if lane_id == "W2TL_0" or lane_id == "W2TL_1" or lane_id == "W2TL_2":
-                lane_group = 0
-            elif lane_id == "W2TL_3":
-                lane_group = 1
-            elif lane_id == "N2TL_0" or lane_id == "N2TL_1" or lane_id == "N2TL_2":
-                lane_group = 2
-            elif lane_id == "N2TL_3":
-                lane_group = 3
-            elif lane_id == "E2TL_0" or lane_id == "E2TL_1" or lane_id == "E2TL_2":
-                lane_group = 4
-            elif lane_id == "E2TL_3":
-                lane_group = 5
-            elif lane_id == "S2TL_0" or lane_id == "S2TL_1" or lane_id == "S2TL_2":
-                lane_group = 6
-            elif lane_id == "S2TL_3":
-                lane_group = 7
-            else:
-                lane_group = -1
+                # finding the lane where the car is located 
+                # x2TL_3 are the "turn left only" lanes
+                if lane_id == "W2TL_0" or lane_id == "W2TL_1" or lane_id == "W2TL_2":
+                    lane_group = 0
+                elif lane_id == "W2TL_3":
+                    lane_group = 1
+                elif lane_id == "N2TL_0" or lane_id == "N2TL_1" or lane_id == "N2TL_2":
+                    lane_group = 2
+                elif lane_id == "N2TL_3":
+                    lane_group = 3
+                elif lane_id == "E2TL_0" or lane_id == "E2TL_1" or lane_id == "E2TL_2":
+                    lane_group = 4
+                elif lane_id == "E2TL_3":
+                    lane_group = 5
+                elif lane_id == "S2TL_0" or lane_id == "S2TL_1" or lane_id == "S2TL_2":
+                    lane_group = 6
+                elif lane_id == "S2TL_3":
+                    lane_group = 7
+                else:
+                    lane_group = -1   #currently crossing or driving away from intersection
 
 
 
-            if lane_group >= 0:  #if car is a valid car (on approach, so not crossing intersection or driving away from it)
-                state[lane_cell][lane_group][0] = 1 #there is a car in the specified cell
+                if lane_group >= 0:  #if car is a valid car (on approach, so not crossing intersection or driving away from it)
+                    state[lane_cell][lane_group][0] = 1 #there is a car in the specified cell
 
         return state
 
