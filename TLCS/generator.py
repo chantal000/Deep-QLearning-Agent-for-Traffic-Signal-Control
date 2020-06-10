@@ -7,19 +7,50 @@ class TrafficGenerator:
         self._max_steps = max_steps
         self._penetration_rate = penetration_rate
 
-    def generate_routefile(self, seed):
+    def generate_routefile(self, seed, scenario_number):
         """
         Generation of the route of every car for one episode 
         """
+        
         np.random.seed(seed)  # make tests reproducible
-
-        # the generation of cars is distributed according to a weibull distribution
-        timings = np.random.weibull(2, self._n_cars_generated)
+        
+        # #GENERATE THE CORRECT SCNEARIO(NUMBER OF CARS, DYNAMIC/CONSTANT)
+        if scenario_number == 0:
+            cars_generated = 150
+            dynamic = False
+        elif scenario_number == 1:
+            cars_generated = 2000
+            dynamic = False
+        elif scenario_number == 2:
+            cars_generated = 5000
+            dynamic = False
+        elif scenario_number == 3:
+            cars_generated = 7000
+            dynamic = False
+        elif scenario_number == 4:
+            cars_generated = 2000
+            dynamic = True
+        elif scenario_number == 5:
+            cars_generated = 2500
+            dynamic = True
+        else:  #must be 0-7
+            cars_generated = None
+            print("Scenario number must be between 0 and 7")
+              
+        
+        
+        #GENERATE TRAFFIC DEMAND FOR THE SCENARIO
+        if dynamic == False:
+            #uniform distribution
+            timings = np.random.uniform(0, self._max_steps, cars_generated)
+        else:
+            #dynamic distribution (weibull)
+            timings = np.random.weibull(2, cars_generated)
         timings = np.sort(timings)
 
         # reshape the distribution to fit the interval 0:max_steps
         car_gen_steps = []
-        min_old = math.floor(timings[1])
+        min_old = math.floor(timings[0])
         max_old = math.ceil(timings[-1])
         min_new = 0
         max_new = self._max_steps
@@ -48,8 +79,10 @@ class TrafficGenerator:
             <route id="S_E" edges="S2TL TL2E"/>""", file=routes)
 
             for car_counter, step in enumerate(car_gen_steps):
+                #randomly decide the arrival direction and whether the vehicle turns
                 straight_or_turn = np.random.uniform()
                 
+
                 
                 #decide if regular or connected vehicle:
                 if np.random.uniform() < self._penetration_rate:
@@ -57,8 +90,7 @@ class TrafficGenerator:
                 else:
                     vehicle_type = "regular_vehicle"
 
-
-
+                
                 if straight_or_turn < 0.75:  # choose direction: straight or turn - 75% of times the car goes straight
                     route_straight = np.random.randint(1, 5)  # choose a random source & destination
                     if route_straight == 1:
@@ -87,5 +119,11 @@ class TrafficGenerator:
                         print('    <vehicle id="S_W_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="S_W" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
                     elif route_turn == 8:
                         print('    <vehicle id="S_E_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="S_E" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)   
+            
+                
+                            
+
+                            
+
                 
             print("</routes>", file=routes)

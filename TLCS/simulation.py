@@ -28,7 +28,11 @@ class Simulation:
         self._green_duration = green_duration
         self._yellow_duration = yellow_duration
         self._num_actions = num_actions
-        
+
+         
+    
+    
+    
 
     def _collect_waiting_times(self):
         """
@@ -164,6 +168,19 @@ class TrainSimulation(Simulation):
         self._avg_queue_length_store = []
         self._training_epochs = training_epochs
         self._copy_step = copy_step
+        self._scenario_index = -1 #dummy
+        
+        #order of scenarios: 4x constant (super low, undersaturated, saturated, oversaturated)
+        # and 4x dynamic (2x saturated peak, 2x oversaturated peak)
+        self._scenario_list = [0,1,2,3,4,4,5,5]  
+     
+
+    def _pick_next_scenario(self):
+        self._scenario_index += 1
+        #reset if it reaches the end of the scneario list
+        if self._scenario_index >= len(self._scenario_list):
+            self._scenario_index = 0
+        return self._scenario_list[self._scenario_index]
         
         
     def _copy_online_into_target_model(self):
@@ -224,7 +241,9 @@ class VanillaTrainSimulation(TrainSimulation):
         start_time = timeit.default_timer()
 
         # first, generate the route file for this simulation and set up sumo
-        self._TrafficGen.generate_routefile(seed=episode)
+        scenario_number = self._pick_next_scenario()
+        self._TrafficGen.generate_routefile(episode, scenario_number)
+        
         traci.start(self._sumo_cmd)
         print("Simulating...")
 
@@ -368,7 +387,8 @@ class RNNTrainSimulation(TrainSimulation):
         start_time = timeit.default_timer()
 
         # first, generate the route file for this simulation and set up sumo
-        self._TrafficGen.generate_routefile(seed=episode)
+        scenario_number = self._pick_next_scenario()
+        self._TrafficGen.generate_routefile(episode, scenario_number)
         traci.start(self._sumo_cmd)
         print("Simulating...")
 
@@ -535,10 +555,11 @@ class RNNTrainSimulation(TrainSimulation):
 
 
 class TestSimulation(Simulation):
-    def __init__(self, Model, TrafficGen, sumo_cmd, max_steps, green_duration, yellow_duration, num_actions):
+    def __init__(self, Model, TrafficGen, sumo_cmd, max_steps, green_duration, yellow_duration, num_actions, scenario_number):
         super().__init__(Model, TrafficGen, sumo_cmd, max_steps, green_duration, yellow_duration, num_actions)
         self._reward_episode = []
         self._queue_length_episode = []
+        self._scenario_number = scenario_number
         
     def _simulate(self, steps_todo):
         """
@@ -562,7 +583,7 @@ class TestSimulation(Simulation):
         start_time = timeit.default_timer()
 
         # first, generate the route file for this simulation and set up sumo
-        self._TrafficGen.generate_routefile(seed=episode)
+        self._TrafficGen.generate_routefile(episode, self._scenario_number)
         traci.start(self._sumo_cmd)
         print("Simulating...")
 

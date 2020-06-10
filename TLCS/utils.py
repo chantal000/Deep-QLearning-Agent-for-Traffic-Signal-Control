@@ -46,6 +46,7 @@ def import_test_configuration(config_file):
     config['green_duration'] = content['simulation'].getint('green_duration')
     config['yellow_duration'] = content['simulation'].getint('yellow_duration')
     config['penetration_rate'] = content['simulation'].getfloat('penetration_rate')
+    config['scenario_number'] = content['simulation'].getint('scenario_to_test')
     config['num_actions'] = content['agent'].getint('num_actions')
     config['sumocfg_file_name'] = content['dir']['sumocfg_file_name']
     config['models_path_name'] = content['dir']['models_path_name']

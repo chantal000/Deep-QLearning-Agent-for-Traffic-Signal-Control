@@ -2,7 +2,7 @@ import traci
 import timeit
 
 class FixedTimeTestSimulation:
-    def __init__(self, TrafficGen, sumo_cmd, max_steps, fixed_green_time, yellow_duration, num_actions):
+    def __init__(self, TrafficGen, sumo_cmd, max_steps, fixed_green_time, yellow_duration, num_actions, scenario_number):
         self._TrafficGen = TrafficGen
         self._step = 0
         self._sumo_cmd = sumo_cmd
@@ -11,6 +11,7 @@ class FixedTimeTestSimulation:
         self._yellow_duration = yellow_duration
         self._num_actions = num_actions
         self._queue_length_episode = []
+        self._scenario_number = scenario_number  #only single scenario is tested at once
         
         self._traffic_light_cycle = [0 for x in range(self._fixed_green_time)] + \
                         [1 for x in range(self._yellow_duration)] + \
@@ -63,7 +64,7 @@ class FixedTimeTestSimulation:
         start_time = timeit.default_timer()
 
         # first, generate the route file for this simulation and set up sumo
-        self._TrafficGen.generate_routefile(seed=episode)
+        self._TrafficGen.generate_routefile(episode, self._scenario_number)
         traci.start(self._sumo_cmd)
         print("Simulating...")
         
