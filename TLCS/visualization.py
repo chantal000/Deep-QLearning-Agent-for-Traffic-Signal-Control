@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import os
 
 class Visualization:
@@ -14,9 +16,12 @@ class Visualization:
         min_val = min(data)
         max_val = max(data)
 
+        
+        plt.style.use('ggplot')
         plt.rcParams.update({'font.size': 24})  # set bigger font size
 
         plt.plot(data)
+        # plt.grid(color='black', linestyle='--', linewidth=0.5)
         plt.ylabel(ylabel)
         plt.xlabel(xlabel)
         plt.margins(0)
@@ -29,4 +34,63 @@ class Visualization:
         with open(os.path.join(self._path, 'plot_'+filename + '_data.txt'), "w") as file:
             for value in data:
                     file.write("%s\n" % value)
+                    
+                    
+    def testing_save_data_and_plot(self, data, filename, xlabel, ylabel):
+        """
+        Produce a plot of performance of the agent over the session and save the relative data to txt.
+        For training we plot the results of several episodes. We plot both the mean and the std deviation.
+        """
+        #data comes in as a list. First it is transformed to a numpy array
+        data_array = np.asarray(data)
+        
+        #calculate the mean and std deviation of the gathered data
+        mean = np.mean(data_array, axis=0)
+        print("mean", mean)
+        std_dev = np.std(data_array, axis=0)
+        steps = np.arange(len(mean))
+        
+        #apply a rolling window to make data more readable and less noisy
+        roling_window = 10
+        mean = self.rollavg_pandas(mean, roling_window)
+        std_dev = self.rollavg_pandas(std_dev, roling_window)
+        
+        #plot figure. Plot both the error bars (std_dev) and mean.
+        plt.figure(figsize=(20, 11.25)) 
+        plt.style.use('ggplot')
+        plt.rcParams.update({'font.size': 24})  # set bigger font size
+
+        ax = plt.subplot(111)  
+        ax.spines["top"].set_visible(False)  
+        ax.spines["right"].set_visible(False)  
+
+        #limit only to where the data is
+        min_val = min(min(mean),min(mean-std_dev))
+        max_val = max(max(mean),max(mean+std_dev))
+        plt.ylim(min_val - 0.05 * abs(min_val), max_val + 0.05 * abs(max_val))
+        plt.ylabel(ylabel)
+        plt.xlabel(xlabel)
+        plt.margins(0)
+
+        #plot the error bars in blue
+        plt.fill_between(steps, mean - std_dev, mean + std_dev, color="#3F5D7D")  
+
+        #plot the means in white
+        plt.plot(steps, mean, color="white", lw=2)  
+
+        fig = plt.gcf()
+        fig.savefig(os.path.join(self._path, 'plot_'+filename+'.png'), dpi=self._dpi)
+        plt.close("all")
+
+        # with open(os.path.join(self._path, 'plot_'+filename + '_data.txt'), "w") as file:
+            # for value in data:
+                    # file.write("%s\n" % value)
+                    
+        with open(os.path.join(self._path, 'plot_'+filename + '_data.txt'), "w") as file:
+            file.write(np.array2string(data_array, separator=" "))
     
+    
+    
+    def rollavg_pandas(self, a,n):
+        'Pandas rolling average over data set a with window size n. Returns a centered np array of same size'
+        return np.ravel(pd.DataFrame(a).rolling(n, center=True, min_periods=1).mean().to_numpy())

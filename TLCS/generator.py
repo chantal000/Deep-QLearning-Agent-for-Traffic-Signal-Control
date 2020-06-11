@@ -2,10 +2,10 @@ import numpy as np
 import math
 
 class TrafficGenerator:
-    def __init__(self, max_steps, n_cars_generated, penetration_rate):
-        self._n_cars_generated = n_cars_generated  # how many cars per episode
+    def __init__(self, max_steps, penetration_rate):
         self._max_steps = max_steps
         self._penetration_rate = penetration_rate
+        self._generated_vehicles = None    #sorted list of all generated vehicles. Contains the departure time, and vehicle type
 
     def generate_routefile(self, seed, scenario_number):
         """
@@ -36,7 +36,9 @@ class TrafficGenerator:
         else:  #must be 0-7
             cars_generated = None
             print("Scenario number must be between 0 and 7")
-              
+        
+        #initialize generated vehicles array
+        self._generated_vehicles = np.zeros(cars_generated, dtype = 'int, U20')
         
         
         #GENERATE TRAFFIC DEMAND FOR THE SCENARIO
@@ -94,36 +96,38 @@ class TrafficGenerator:
                 if straight_or_turn < 0.75:  # choose direction: straight or turn - 75% of times the car goes straight
                     route_straight = np.random.randint(1, 5)  # choose a random source & destination
                     if route_straight == 1:
-                        print('    <vehicle id="W_E_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="W_E" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
-                    elif route_straight == 2:
-                        print('    <vehicle id="E_W_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="E_W" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="W_E" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
+                        # print('    <vehicle id="W_E_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="W_E" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                    elif route_straight == 2:                       
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="E_W" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                     elif route_straight == 3:
-                        print('    <vehicle id="N_S_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="N_S" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
-                    else:
-                        print('    <vehicle id="S_N_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="S_N" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="N_S" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
+                    else:                        
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="S_N" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                 else:  # car that turn - 25% of the time the car turns
                     route_turn = np.random.randint(1, 9)  # choose random source source & destination
                     if route_turn == 1:
-                        print('    <vehicle id="W_N_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="W_N" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="W_N" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                     elif route_turn == 2:
-                        print('    <vehicle id="W_S_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="W_S" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="W_S" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                     elif route_turn == 3:
-                        print('    <vehicle id="N_W_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="N_W" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="N_W" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                     elif route_turn == 4:
-                        print('    <vehicle id="N_E_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="N_E" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="N_E" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                     elif route_turn == 5:
-                        print('    <vehicle id="E_N_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="E_N" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="E_N" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                     elif route_turn == 6:
-                        print('    <vehicle id="E_S_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="E_S" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="E_S" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
                     elif route_turn == 7:
-                        print('    <vehicle id="S_W_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="S_W" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)
-                    elif route_turn == 8:
-                        print('    <vehicle id="S_E_'+str(car_counter)+ '" type="' + str(vehicle_type) + '" route="S_E" depart="' + str(step) + '" departLane="random" departSpeed="10" />'       , file=routes)   
-            
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="S_W" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)
+                    else:
+                        print('    <vehicle id="'+str(car_counter)+'" type="' + str(vehicle_type) + '" route="S_E" depart="' + str(step) + '" departLane="random" departSpeed="13.89" />'       , file=routes)   
+                self._generated_vehicles[car_counter] = (step, vehicle_type)
+
                 
                             
 
                             
 
-                
+            # print("generated vehicles: ", self._generated_vehicles)   
             print("</routes>", file=routes)

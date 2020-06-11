@@ -14,7 +14,6 @@ def import_train_configuration(config_file):
     config['gui'] = content['simulation'].getboolean('gui')
     config['total_episodes'] = content['simulation'].getint('total_episodes')
     config['max_steps'] = content['simulation'].getint('max_steps')
-    config['n_cars_generated'] = content['simulation'].getint('n_cars_generated')
     config['green_duration'] = content['simulation'].getint('green_duration')
     config['yellow_duration'] = content['simulation'].getint('yellow_duration')
     config['copy_step'] = content['simulation'].getint('copy_step')
@@ -41,7 +40,6 @@ def import_test_configuration(config_file):
     config = {}
     config['gui'] = content['simulation'].getboolean('gui')
     config['max_steps'] = content['simulation'].getint('max_steps')
-    config['n_cars_generated'] = content['simulation'].getint('n_cars_generated')
     config['episode_seed'] = content['simulation'].getint('episode_seed')
     config['green_duration'] = content['simulation'].getint('green_duration')
     config['yellow_duration'] = content['simulation'].getint('yellow_duration')
