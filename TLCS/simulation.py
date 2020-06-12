@@ -30,26 +30,22 @@ class Simulation:
         self._num_actions = num_actions
 
          
-    
-    
-    
-
-    def _collect_waiting_times(self):
+    def _get_waiting_times(self):
         """
         Retrieve the waiting time of every car in the incoming roads
         """
+        cumulative_waiting_time = 0
+        
         incoming_roads = ["E2TL", "N2TL", "W2TL", "S2TL"]
         car_list = traci.vehicle.getIDList()
         for car_id in car_list:
             wait_time = traci.vehicle.getAccumulatedWaitingTime(car_id)
             road_id = traci.vehicle.getRoadID(car_id)  # get the road id where the car is located
             if road_id in incoming_roads:  # consider only the waiting times of cars in incoming roads
-                self._waiting_times[car_id] = wait_time
-            else:
-                if car_id in self._waiting_times: # a car that was tracked has cleared the intersection
-                    del self._waiting_times[car_id] 
-        total_waiting_time = sum(self._waiting_times.values())
-        return total_waiting_time
+                cumulative_waiting_time += wait_time
+        return cumulative_waiting_time
+    
+
 
 
     def _get_state(self):
@@ -153,6 +149,24 @@ class Simulation:
         halt_W = traci.edge.getLastStepHaltingNumber("W2TL")
         queue_length = halt_N + halt_S + halt_E + halt_W
         return queue_length
+        
+    def _get_vehicle_delay(self):
+        """
+        Retrieve the cumulative delay of every vehicle currently in the simulation
+        """
+        total_delay = 0
+        car_list = traci.vehicle.getIDList()
+        for car_id in car_list:
+            #actual driving time = current time - departure time
+            actual_driving_time = self._step - self._TrafficGen._generated_vehicles[int(car_id)][0] 
+            #optimal driving time = distance driven / optimal speed on the road (13.89m/s)
+            optimal_driving_time = traci.vehicle.getDistance(car_id) / 13.89
+            
+            delay = actual_driving_time - optimal_driving_time
+            total_delay += delay 
+            
+        cum_delay = total_delay / len(car_list) if len(car_list) > 0 else 0
+        return cum_delay
 
 
 
@@ -166,6 +180,7 @@ class TrainSimulation(Simulation):
         self._reward_store = []
         self._cumulative_wait_store = []
         self._avg_queue_length_store = []
+        self._cumulative_delay_store = []
         self._training_epochs = training_epochs
         self._copy_step = copy_step
         self._scenario_index = -1 #dummy
@@ -180,6 +195,7 @@ class TrainSimulation(Simulation):
         #reset if it reaches the end of the scneario list
         if self._scenario_index >= len(self._scenario_list):
             self._scenario_index = 0
+            
         return self._scenario_list[self._scenario_index]
         
         
@@ -203,8 +219,10 @@ class TrainSimulation(Simulation):
             self._step += 1 # update the step counter
             steps_todo -= 1
             queue_length = self._get_queue_length()
+
             self._sum_queue_length += queue_length
             self._sum_waiting_time += queue_length # 1 step while wating in queue means 1 second waited, for each car, therefore queue_lenght == waited_seconds
+            self._sum_delay += self._get_vehicle_delay()
 
     def _save_episode_stats(self):
         """
@@ -213,22 +231,24 @@ class TrainSimulation(Simulation):
         self._reward_store.append(self._sum_neg_reward)  # how much negative reward in this episode
         self._cumulative_wait_store.append(self._sum_waiting_time)  # total number of seconds waited by cars in this episode
         self._avg_queue_length_store.append(self._sum_queue_length / self._max_steps)  # average number of queued cars per step, in this episode
-
+        self._cumulative_delay_store.append(self._sum_delay) #total seconds delay by all vehicles in this episode
 
 
     @property
     def reward_store(self):
         return self._reward_store
 
-
     @property
     def cumulative_wait_store(self):
         return self._cumulative_wait_store
 
-
     @property
     def avg_queue_length_store(self):
         return self._avg_queue_length_store
+        
+    @property
+    def cumulative_delay_store(self):
+        return self._cumulative_delay_store
 
 
 
@@ -251,10 +271,10 @@ class VanillaTrainSimulation(TrainSimulation):
 
         # inits
         self._step = 0
-        self._waiting_times = {}
         self._sum_neg_reward = 0
         self._sum_queue_length = 0
         self._sum_waiting_time = 0
+        self._sum_delay = 0
         old_total_wait = 0
         old_state = -1
         old_action = -1
@@ -267,7 +287,7 @@ class VanillaTrainSimulation(TrainSimulation):
 
             # calculate reward of previous action: (change in cumulative waiting time between actions)
             # waiting time = seconds waited by a car since the spawn in the environment, cumulated for every car in incoming lanes
-            current_total_wait = self._collect_waiting_times()
+            current_total_wait = self._get_waiting_times()
             reward = old_total_wait - current_total_wait
 
             # saving the data into the memory
@@ -396,10 +416,10 @@ class RNNTrainSimulation(TrainSimulation):
 
         # inits
         self._step = 0
-        self._waiting_times = {}
         self._sum_neg_reward = 0
         self._sum_queue_length = 0
         self._sum_waiting_time = 0
+        self._sum_delay = 0
         old_total_wait = 0
         old_state = -1
         old_action = -1
@@ -416,7 +436,7 @@ class RNNTrainSimulation(TrainSimulation):
 
             # calculate reward of previous action: (change in cumulative waiting time between actions)
             # waiting time = seconds waited by a car since the spawn in the environment, cumulated for every car in incoming lanes
-            current_total_wait = self._collect_waiting_times()
+            current_total_wait = self._get_waiting_times()
             reward = old_total_wait - current_total_wait
 
 
@@ -559,23 +579,49 @@ class RNNTrainSimulation(TrainSimulation):
 class TestSimulation(Simulation):
     def __init__(self, Model, TrafficGen, sumo_cmd, max_steps, green_duration, yellow_duration, num_actions, scenario_number):
         super().__init__(Model, TrafficGen, sumo_cmd, max_steps, green_duration, yellow_duration, num_actions)
-        self._reward_episode = []
-        self._queue_length_episode = []
-        self._scenario_number = scenario_number
+        # self._reward_episode = []
+        # self._queue_length_episode = []
+        
+        self._queue_length_all_episodes = []
+        self._delay_all_episodes = []
+        self._wait_all_episodes = []
+        
+        self._scenario_number = scenario_number #only single scenario is tested at once
+        
         
     def _simulate(self, steps_todo):
         """
-        Proceed with the simulation in sumo
+        Proceed with the simulation in sumo for "steps_todo" steps
         """
         if (self._step + steps_todo) >= self._max_steps:  # do not do more steps than the maximum allowed number of steps
             steps_todo = self._max_steps - self._step
 
+        # temp_delay_episode = []
+        # temp_queue_length_episode = []
+        # temp_wait_episode = []
+        
         while steps_todo > 0:
             traci.simulationStep()  # simulate 1 step in sumo
             self._step += 1 # update the step counter
             steps_todo -= 1
-            queue_length = self._get_queue_length() 
-            self._queue_length_episode.append(queue_length)
+            
+            # #ADD KPI TO LIST
+            # temp_delay_episode.append(self._get_vehicle_delay())
+            # temp_queue_length_episode.append(self._get_queue_length())
+            # temp_wait_episode.append(self._collect_waiting_times())
+            
+            #ADD KPI TO LIST
+            self._delay_episode.append(self._get_vehicle_delay())
+            self._queue_length_episode.append(self._get_queue_length())
+            self._wait_episode.append(self._get_waiting_times())
+            
+            # queue_length = self._get_queue_length() 
+            # self._queue_length_episode.append(queue_length)
+        # return temp_delay_episode, temp_queue_length_episode, temp_wait_episode
+            
+            
+            
+            
 
 
     def run(self, episode):
@@ -589,12 +635,16 @@ class TestSimulation(Simulation):
         traci.start(self._sumo_cmd)
         print("Simulating...")
 
-        # inits
+        # INITS
         self._step = 0
-        self._waiting_times = {}
-        old_total_wait = 0
+        # self._waiting_times = {}
+        # old_total_wait = 0
         old_action = -1 # dummy init
-
+        
+        #list for the data for just this one episode. Reset for every new tested episode
+        self._delay_episode = []
+        self._queue_length_episode = []
+        self._wait_episode = []
 
         while self._step < self._max_steps:
             # get current state of the intersection
@@ -602,8 +652,8 @@ class TestSimulation(Simulation):
 
             # calculate reward of previous action: (change in cumulative waiting time between actions)
             # waiting time = seconds waited by a car since the spawn in the environment, cumulated for every car in incoming lanes
-            current_total_wait = self._collect_waiting_times()
-            reward = old_total_wait - current_total_wait
+            # current_total_wait = self._collect_waiting_times()
+            #reward = old_total_wait - current_total_wait
 
             # choose the light phase to activate, based on the current state of the intersection
             action = self._choose_action(current_state)
@@ -612,6 +662,7 @@ class TestSimulation(Simulation):
             if self._step != 0 and old_action != action:
                 self._set_yellow_phase(old_action)
                 self._simulate(self._yellow_duration)
+                
 
             # execute the phase selected before
             self._set_green_phase(action)
@@ -619,11 +670,16 @@ class TestSimulation(Simulation):
 
             # saving variables for later & accumulate reward
             old_action = action
-            old_total_wait = current_total_wait
+            # old_total_wait = current_total_wait
 
-            self._reward_episode.append(reward)
+            # self._reward_episode.append(reward)
 
-        print("Total reward:", np.sum(self._reward_episode))
+        
+        #when episode is over, add the whole list with epsode stats to the full list of all episodes
+        self._delay_all_episodes.append(self._delay_episode)
+        self._queue_length_all_episodes.append(self._queue_length_episode)
+        self._wait_all_episodes.append(self._wait_episode)
+        
         traci.close()
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
@@ -633,7 +689,6 @@ class TestSimulation(Simulation):
         """
         Pick the best action known based on the current state of the env
         """
-        
         #expand dimension if it is a recurrent model (requires number of time steps, here = 1)
         if len(self._Model._model.layers[0].input.shape) > len(self._Model._state_shape)+1:
             state = np.expand_dims(state, axis = 0)
@@ -644,12 +699,13 @@ class TestSimulation(Simulation):
 
 
     @property
-    def queue_length_episode(self):
-        return self._queue_length_episode
-
-
+    def delay_all_episodes(self):
+        return self._delay_all_episodes
+        
     @property
-    def reward_episode(self):
-        return self._reward_episode
-
-
+    def queue_length_all_episodes(self):
+        return self._queue_length_all_episodes
+        
+    @property
+    def wait_all_episodes(self):
+        return self._wait_all_episodes

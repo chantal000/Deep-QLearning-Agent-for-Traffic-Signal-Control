@@ -9,7 +9,7 @@ class Visualization:
             self._dpi = dpi
 
 
-    def save_data_and_plot(self, data, filename, xlabel, ylabel):
+    def training_save_data_and_plot(self, data, filename, xlabel, ylabel):
         """
         Produce a plot of performance of the agent over the session and save the relative data to txt
         """
@@ -46,7 +46,7 @@ class Visualization:
         
         #calculate the mean and std deviation of the gathered data
         mean = np.mean(data_array, axis=0)
-        print("mean", mean)
+        # print("mean", mean)
         std_dev = np.std(data_array, axis=0)
         steps = np.arange(len(mean))
         
@@ -82,12 +82,9 @@ class Visualization:
         fig.savefig(os.path.join(self._path, 'plot_'+filename+'.png'), dpi=self._dpi)
         plt.close("all")
 
-        # with open(os.path.join(self._path, 'plot_'+filename + '_data.txt'), "w") as file:
-            # for value in data:
-                    # file.write("%s\n" % value)
-                    
-        with open(os.path.join(self._path, 'plot_'+filename + '_data.txt'), "w") as file:
-            file.write(np.array2string(data_array, separator=" "))
+        with open(os.path.join(self._path, 'plot_'+filename + '_data.csv'), "w") as file:
+            np.savetxt(file, data_array, delimiter=",",  fmt = '%.6f')
+
     
     
     

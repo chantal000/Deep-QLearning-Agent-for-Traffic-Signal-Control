@@ -10,11 +10,10 @@ class FixedTimeTestSimulation:
         self._fixed_green_time = fixed_green_time
         self._yellow_duration = yellow_duration
         self._num_actions = num_actions
-        # self._queue_length_episode = []
-        # self._average_delay_episode = []
         
         self._queue_length_all_episodes = []
-        self._average_delay_all_episodes = []
+        self._delay_all_episodes = []
+        self._wait_all_episodes = []
         
         
         self._scenario_number = scenario_number  #only single scenario is tested at once
@@ -47,7 +46,7 @@ class FixedTimeTestSimulation:
         
     def _get_vehicle_delay(self):
         """
-        Retrieve the average delay of every vehicle currently in the simulation
+        Retrieve the cumulative delay of every vehicle currently in the simulation
         """
         total_delay = 0
         car_list = traci.vehicle.getIDList()
@@ -68,27 +67,26 @@ class FixedTimeTestSimulation:
                     # ", vehicle speed: ", str(traci.vehicle.getSpeed(car_id)), \
                     # ", --DELAY--: ", str(delay))
             
-        average_delay = total_delay / len(car_list) if len(car_list) > 0 else 0
-        # print("-------------------average delay in step ", str(self._step), ": ", str(average_delay))
-        return average_delay
+        cum_delay = total_delay / len(car_list) if len(car_list) > 0 else 0
+        # print("------------------- delay in step ", str(self._step), ": ", str(delay))
+        return cum_delay
         
         
-    def _collect_waiting_times(self):
+    def _get_waiting_times(self):
         """
         Retrieve the waiting time of every car in the incoming roads
         """
+        cumulative_waiting_time = 0
+        
         incoming_roads = ["E2TL", "N2TL", "W2TL", "S2TL"]
         car_list = traci.vehicle.getIDList()
         for car_id in car_list:
             wait_time = traci.vehicle.getAccumulatedWaitingTime(car_id)
             road_id = traci.vehicle.getRoadID(car_id)  # get the road id where the car is located
             if road_id in incoming_roads:  # consider only the waiting times of cars in incoming roads
-                self._waiting_times[car_id] = wait_time
-            else:
-                if car_id in self._waiting_times: # a car that was tracked has cleared the intersection
-                    del self._waiting_times[car_id] 
-        total_waiting_time = sum(self._waiting_times.values())
-        return total_waiting_time
+                cumulative_waiting_time += wait_time
+        return cumulative_waiting_time
+        
         
         
     def run(self, episode):
@@ -105,19 +103,17 @@ class FixedTimeTestSimulation:
         
         # inits
         self._step = 0
-        self._waiting_times = {}
+        # self._waiting_times = {}
         cycle_step = 0
-        average_delay_episode = []
+        delay_episode = []
+        queue_length_episode = []
+        wait_episode = []
         
         
         
         
         while self._step < self._max_steps:
-            
-            
-            
-            # current_total_wait = self._collect_waiting_times()
-            
+
             #SET TRAFFIC LIGHT + INCREASE CYCLE STEP  
             traci.trafficlight.setPhase("TL", self._traffic_light_cycle[cycle_step])
             cycle_step += 1
@@ -128,35 +124,37 @@ class FixedTimeTestSimulation:
             # DO ONE SIMULATION STEP IN SUMO
             traci.simulationStep()
             self._step += 1 # update the step counter
-            # queue_length = self._get_queue_length() 
-            # self._queue_length_episode.append(queue_length)
             
-            # self._average_delay_episode.append(self._get_vehicle_delay())
-            average_delay_episode.append(self._get_vehicle_delay())
+            #ADD KPI TO LIST
+            delay_episode.append(self._get_vehicle_delay())
+            queue_length_episode.append(self._get_queue_length())
+            wait_episode.append(self._get_waiting_times())
+        
         #when episode is over, add the whole list with epsode stats to the full list of all episodes
-        self._average_delay_all_episodes.append(average_delay_episode)
+        self._delay_all_episodes.append(delay_episode)
+        self._queue_length_all_episodes.append(queue_length_episode)
+        self._wait_all_episodes.append(wait_episode)
 
         traci.close()
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
         return simulation_time
             
-    
-    
-    
+
+        
+        
         
     @property
-    def queue_length_episode(self):
-        return self._queue_length_episode  
-
-
-    @property
-    def average_delay_episode(self):
-        return self._average_delay_episode
+    def delay_all_episodes(self):
+        return self._delay_all_episodes
         
     @property
-    def average_delay_all_episodes(self):
-        return self._average_delay_all_episodes
+    def queue_length_all_episodes(self):
+        return self._queue_length_all_episodes
+        
+    @property
+    def wait_all_episodes(self):
+        return self._wait_all_episodes
 
 
 
