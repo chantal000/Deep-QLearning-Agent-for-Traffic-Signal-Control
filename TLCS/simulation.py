@@ -28,6 +28,13 @@ class Simulation:
         self._green_duration = green_duration
         self._yellow_duration = yellow_duration
         self._num_actions = num_actions
+        
+        self._current_phase = -1 #dummy
+        self._elapsed_time_since_phase_start = 0
+ 
+        
+        self._max_cars_per_lane_cell = [1,1,1,1,2,3,6,8,32,47] #how many cars fit into each lane cell
+        
 
          
     def _get_waiting_times(self):
@@ -53,8 +60,13 @@ class Simulation:
         Retrieve the state of the intersection from sumo, in the form of cell occupancy
         """
         
-        state = np.zeros(self._Model._state_shape)
+        #initialize state arrays
+        conv_state = np.zeros(self._Model._state_shape[0])
+        green_phase_state = np.zeros(self._Model._state_shape[1])
+        green_phase_state[self._current_phase] = 1  #one-hot encoded current green phase
+        elapsed_time_state = self._elapsed_time_since_phase_start
         
+
         car_list = traci.vehicle.getIDList()
 
         for car_id in car_list:
@@ -65,6 +77,8 @@ class Simulation:
                 lane_pos = traci.vehicle.getLanePosition(car_id)
                 lane_id = traci.vehicle.getLaneID(car_id)
                 lane_pos = 750 - lane_pos  # inversion of lane pos, so if the car is close to the traffic light -> lane_pos = 0 --- 750 = max len of a road
+
+                speed = traci.vehicle.getSpeed(car_id)
 
                 # distance in meters from the traffic light -> mapping into cells
                 if lane_pos < 7:
@@ -112,9 +126,31 @@ class Simulation:
 
 
                 if lane_group >= 0:  #if car is a valid car (on approach, so not crossing intersection or driving away from it)
-                    state[lane_cell][lane_group][0] = 1 #there is a car in the specified cell
+                    conv_state[lane_cell][lane_group][0] += 1 #add one car to the list of cars in this cell (for now it keeps track of the absolute number of cars in this cell)
+                    conv_state[lane_cell][lane_group][1] += speed #add all speeds of vehicles in this cell together
 
-        return state
+        
+        #loop over every single cell
+        for lane_cell in range(10):
+            for lane_group in range(8):
+                number_cars_in_cell = conv_state[lane_cell][lane_group][0]
+                
+                #only calculate stuff if there is a car in the cell, else the cell remains 0
+                if number_cars_in_cell > 0:
+              
+                    #for the three sraight/right turning lanes, it is a triple lane. The left turning lane is singular.
+                    if lane_group == 0 or lane_group == 2 or lane_group == 4 or lane_group == 6:
+                        lane_multiplier = 3
+                    else:
+                        lane_multiplier = 1
+                
+                    #averaged normalized cell speed: divide summed speed in each cell by the number of cars in that cell and then normalize with the allowed max_speed
+                    conv_state[lane_cell][lane_group][1] = (conv_state[lane_cell][lane_group][1] / number_cars_in_cell ) / 13.89
+                
+                    #calculate the cell occupancy/density per cell: #cars / #max cars (take into account lane multiplier!!)
+                    conv_state[lane_cell][lane_group][0] = number_cars_in_cell / (self._max_cars_per_lane_cell[lane_cell] * lane_multiplier) 
+
+        return [conv_state, green_phase_state, elapsed_time_state]
 
 
     def _set_yellow_phase(self, old_action):
@@ -137,6 +173,10 @@ class Simulation:
             traci.trafficlight.setPhase("TL", PHASE_EW_GREEN)
         elif action_number == 3:
             traci.trafficlight.setPhase("TL", PHASE_EWL_GREEN)
+        
+        # reset elapsed green time and current phase
+        self._current_phase = action_number
+        self._elapsed_time_since_phase_start = 0
 
 
     def _get_queue_length(self):
@@ -217,8 +257,11 @@ class TrainSimulation(Simulation):
         while steps_todo > 0:
             traci.simulationStep()  # simulate 1 step in sumo
             self._step += 1 # update the step counter
+            self._elapsed_time_since_phase_start +=1 #update the elapsed green time counter
             steps_todo -= 1
             queue_length = self._get_queue_length()
+            
+            
 
             self._sum_queue_length += queue_length
             self._sum_waiting_time += queue_length # 1 step while wating in queue means 1 second waited, for each car, therefore queue_lenght == waited_seconds
@@ -278,12 +321,16 @@ class VanillaTrainSimulation(TrainSimulation):
         old_total_wait = 0
         old_state = -1
         old_action = -1
+        self._current_phase = -1 #dummy
+        self._elapsed_time_since_phase_start = 0
+        
         
         
         while self._step < self._max_steps:
 
-            # get current state of the intersection
+            # get current state of the intersection (shape: conv, current green phase, elapsed time since beginning green phase)
             current_state = self._get_state()
+            # print("current_state shape: ", len(current_state))
 
             # calculate reward of previous action: (change in cumulative waiting time between actions)
             # waiting time = seconds waited by a car since the spawn in the environment, cumulated for every car in incoming lanes
@@ -305,6 +352,10 @@ class VanillaTrainSimulation(TrainSimulation):
             # execute the phase selected before
             self._set_green_phase(action)
             self._simulate(self._green_duration)
+            
+            
+            
+            
 
             # saving variables for later & accumulate reward
             old_state = current_state
@@ -351,12 +402,17 @@ class VanillaTrainSimulation(TrainSimulation):
             states = np.array([val[0] for val in batch])  # extract states from the batch
             next_states = np.array([val[3] for val in batch])  # extract next states from the batch
 
-            # prediction
+            # print("states shape: ", states.shape)
+            # print("inner states shape: shape 0 ", states[0][0].shape, "shape 1", states[0][1].shape, "shape 2")
+            
+            # prediction           
             q_s_a = self._Model.predict_batch(states)  # predict Q(state, action), for every sample
             q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state, action), for every sample
 
             # setup training arrays
-            x = np.zeros((len(batch), ) + self._Model._state_shape) #from online network
+            x_conv = np.zeros((len(batch), ) + self._Model._state_shape[0]) #from online network
+            x_phase = np.zeros((len(batch), ) + (self._Model._state_shape[1], )) #from online network
+            x_elapsed = np.zeros((len(batch), ) + (self._Model._state_shape[2], )) #from online network
             y = np.zeros((len(batch), self._num_actions))  #from target network
 
             for i, b in enumerate(batch):
@@ -365,10 +421,12 @@ class VanillaTrainSimulation(TrainSimulation):
                 
                 #update with combination of online and target network
                 current_q[action] = reward + self._gamma * np.amax(q_s_a_d[i])  # update Q(state, action)
-                x[i] = state
+                x_conv[i] = state[0]
+                x_phase[i] = state[1]
+                x_elapsed[i] = state[2]
                 y[i] = current_q  # Q(state) that includes the updated action value
 
-            self._Model.train_batch(x, y)  # train the NN
+            self._Model.train_batch([x_conv, x_phase, x_elapsed], y)  # train the NN
     
     
     def _choose_action(self, state, epsilon):
@@ -378,6 +436,9 @@ class VanillaTrainSimulation(TrainSimulation):
         if random.random() < epsilon:
             return random.randint(0, self._num_actions - 1) # random action
         else:
+            # prediction = np.argmax(self._Model.predict_one(state))
+            # print("predicted action: ", prediction)
+            # return prediction
             return np.argmax(self._Model.predict_one(state)) # the best action given the current state
 
 
@@ -410,6 +471,7 @@ class RNNTrainSimulation(TrainSimulation):
 
         # first, generate the route file for this simulation and set up sumo
         scenario_number = self._pick_next_scenario()
+        # scenario_number = 0
         self._TrafficGen.generate_routefile(episode, scenario_number)
         traci.start(self._sumo_cmd)
         print("Simulating...")
@@ -423,6 +485,8 @@ class RNNTrainSimulation(TrainSimulation):
         old_total_wait = 0
         old_state = -1
         old_action = -1
+        self._current_phase = -1 #dummy
+        self._elapsed_time_since_phase_start = 0
         
         #prepare the model used for prediction (based on the previously trained model)
         self._update_and_reset_predict_model()
@@ -433,6 +497,7 @@ class RNNTrainSimulation(TrainSimulation):
         while self._step < self._max_steps:
             # get current state of the intersection
             current_state = self._get_state()
+            # print("current_state shape: ", len(current_state))
 
             # calculate reward of previous action: (change in cumulative waiting time between actions)
             # waiting time = seconds waited by a car since the spawn in the environment, cumulated for every car in incoming lanes
@@ -507,7 +572,7 @@ class RNNTrainSimulation(TrainSimulation):
         if random.random() < epsilon:
             return random.randint(0, self._num_actions - 1) # random action
         else:
-            state = np.expand_dims(state, axis = 0)
+            # state = np.expand_dims(state, axis = 0)
             return np.argmax(self._PredictModel.predict_one(state)) # the best action given the current state
     
     
@@ -547,25 +612,52 @@ class RNNTrainSimulation(TrainSimulation):
             q_s_a_d = self._TargetModel.predict_batch(next_states)  # predict Q(next_state), for every sample
 
             
+            # # setup training arrays
+            # x = np.zeros((len(batch), self._Model._sequence_length ) + self._Model._state_shape) #from online network
+            # y = np.zeros((len(batch), self._Model._sequence_length, self._num_actions))  #from target network
+            
             
             # setup training arrays
-            x = np.zeros((len(batch), self._Model._sequence_length ) + self._Model._state_shape) #from online network
+            x_conv = np.zeros((len(batch), self._Model._sequence_length) + self._Model._state_shape[0]) #from online network
+            x_phase = np.zeros((len(batch), self._Model._sequence_length) + (self._Model._state_shape[1], )) #from online network
+            x_elapsed = np.zeros((len(batch), self._Model._sequence_length) + (self._Model._state_shape[2], )) #from online network
             y = np.zeros((len(batch), self._Model._sequence_length, self._num_actions))  #from target network
+
+            
+            
+            
+            # for i, b in enumerate(batch):
+                # state, action, reward, _ = b[0], b[1], b[2], b[3]  # extract data from one sample
+                # current_q = q_s_a[i]  # get the Q(state) predicted before
+                
+                # #update with combination of online and target network
+                # current_q[action] = reward + self._gamma * np.amax(q_s_a_d[i])  # update Q(state, action)
+                # x_conv[i] = state[0]
+                # x_phase[i] = state[1]
+                # x_elapsed[i] = state[2]
+                # y[i] = current_q  # Q(state) that includes the updated action value
+
+            # self._Model.train_batch([x_conv, x_phase, x_elapsed], y)  # train the NN
+            
+            
+            
+            
             
             
             for index_sequence, sequence in enumerate(batch):
                 for index_step, step in enumerate(sequence):
                     state, action, reward, _ = step[0], step[1], step[2], step[3]  # extract data from one sample
-                    
                     current_q = q_s_a[index_sequence][index_step]  # get the Q(state) predicted before
-
                     
                     #update with combination of online and target network
                     current_q[action] = reward + self._gamma * np.amax(q_s_a_d[index_sequence][index_step])  # update Q(state, action)
-                    x[index_sequence][index_step] = state
+                    x_conv[index_sequence][index_step] = state[0]
+                    x_phase[index_sequence][index_step] = state[1]
+                    x_elapsed[index_sequence][index_step] = state[2]
+                    # x[index_sequence][index_step] = state
                     y[index_sequence][index_step] = current_q
-
-            self._Model.train_batch(x, y)  # train the NN
+            self._Model.train_batch([x_conv, x_phase, x_elapsed], y)  # train the NN
+            # self._Model.train_batch(x, y)  # train the NN
 
 
 
@@ -603,6 +695,7 @@ class TestSimulation(Simulation):
         while steps_todo > 0:
             traci.simulationStep()  # simulate 1 step in sumo
             self._step += 1 # update the step counter
+            self._elapsed_time_since_phase_start +=1 #update the elapsed green time counter
             steps_todo -= 1
             
             # #ADD KPI TO LIST
@@ -640,6 +733,8 @@ class TestSimulation(Simulation):
         # self._waiting_times = {}
         # old_total_wait = 0
         old_action = -1 # dummy init
+        self._current_phase = -1 #dummy
+        self._elapsed_time_since_phase_start = 0
         
         #list for the data for just this one episode. Reset for every new tested episode
         self._delay_episode = []
@@ -690,8 +785,12 @@ class TestSimulation(Simulation):
         Pick the best action known based on the current state of the env
         """
         #expand dimension if it is a recurrent model (requires number of time steps, here = 1)
-        if len(self._Model._model.layers[0].input.shape) > len(self._Model._state_shape)+1:
-            state = np.expand_dims(state, axis = 0)
+        # if len(self._Model._model.layers[0].input.shape) > len(self._Model._state_shape)+1:
+            # # state = np.expand_dims(state, axis = 0)
+            # s0 = np.expand_dims(state[0], axis = 0)
+            # s1 = np.expand_dims(state[1], axis = 0)
+            # s2 = np.expand_dims(state[2], axis = 0)
+            # state = [s0,s1,s2]
         
         return np.argmax(self._Model.predict_one(state)) # the best action given the current state
     
