@@ -3,8 +3,9 @@ from __future__ import print_function
 
 import os
 from shutil import copyfile
+import datetime
 
-from testing_simulation import Simulation
+from simulation import Simulation, TestSimulation
 from generator import TrafficGenerator
 from model import TestModel
 from visualization import Visualization
@@ -17,14 +18,22 @@ if __name__ == "__main__":
     sumo_cmd = set_sumo(config['gui'], config['sumocfg_file_name'], config['max_steps'])
     model_path, plot_path = set_test_path(config['models_path_name'], config['model_to_test'])
 
+    
+    
+    #SET PARAMETERS
+    number_of_cells_per_lane = 10
+    state_shape = (number_of_cells_per_lane, 8, 1)
+    
+    
+    
     Model = TestModel(
-        input_dim=config['num_states'],
-        model_path=model_path
+        model_path=model_path,
+        state_shape=state_shape
     )
 
     TrafficGen = TrafficGenerator(
         config['max_steps'], 
-        config['n_cars_generated']
+        config['penetration_rate']
     )
 
     Visualization = Visualization(
@@ -32,24 +41,41 @@ if __name__ == "__main__":
         dpi=96
     )
         
-    Simulation = Simulation(
+    Simulation = TestSimulation(
         Model,
         TrafficGen,
         sumo_cmd,
         config['max_steps'],
         config['green_duration'],
         config['yellow_duration'],
-        config['num_states'],
-        config['num_actions']
+        config['num_actions'],
+        config['scenario_number']
     )
 
-    print('\n----- Test episode')
-    simulation_time = Simulation.run(config['episode_seed'])  # run the simulation
-    print('Simulation time:', simulation_time, 's')
+    
+    episode = 0
+    timestamp_start = datetime.datetime.now()
+    
+    
+    while episode < config['total_episodes']:
+        print('\n----- Test Episode', str(episode+1), 'of', str(config['total_episodes']))
+        
+        #run simulation + train for one episode at a time
+        simulation_time = Simulation.run(episode * 10000)  # run the simulation (with a guaranteed different seed than in training)
+        print('Simulation time:', simulation_time, 's')
+        episode += 1
 
+
+    print("\n----- Start time:", timestamp_start)
+    print("----- End time:", datetime.datetime.now())
+    
     print("----- Testing info saved at:", plot_path)
 
     copyfile(src='testing_settings.ini', dst=os.path.join(plot_path, 'testing_settings.ini'))
 
-    Visualization.save_data_and_plot(data=Simulation.reward_episode, filename='reward', xlabel='Action step', ylabel='Reward')
-    Visualization.save_data_and_plot(data=Simulation.queue_length_episode, filename='queue', xlabel='Step', ylabel='Queue lenght (vehicles)')
+    
+#     all_average_delay = Simulation.average_delay_all_episodes
+    
+    Visualization.testing_save_data_and_plot(data=Simulation.delay_all_episodes, filename='cumulative_delay', xlabel='Simulation step', ylabel='Cumulative vehicle delay [s]')
+    Visualization.testing_save_data_and_plot(data=Simulation.queue_length_all_episodes, filename='queue_length', xlabel='Simulation step', ylabel='Cumulative queue length [vehicles]')
+    Visualization.testing_save_data_and_plot(data=Simulation.wait_all_episodes, filename='cumulative_wait', xlabel='Simulation step', ylabel='Cumulative waiting time [s]')
