@@ -66,10 +66,11 @@ class VanillaTrainModel(TrainModel):
                 
         #convolutional part
         conv_inputs = keras.Input(shape = self._state_shape[0])
-        c1 = layers.Conv2D(filters = 128, kernel_size = 4, strides = (2,2), padding = "same", activation = 'relu')(conv_inputs)
-        c2 = layers.Conv2D(filters = 128, kernel_size = 4, strides = (2,2), padding = "same", activation = 'relu')(c1)
-        c3 = layers.Conv2D(filters = 64, kernel_size = 2, strides = (1,1), padding = "same", activation = 'relu')(c2)
+        c1 = layers.Conv2D(filters = 32, kernel_size = 2, strides = (2,2), padding = "same", activation = 'relu')(conv_inputs)
+        c2 = layers.Conv2D(filters = 64, kernel_size = 2, strides = (2,2), padding = "same", activation = 'relu')(c1)
+        c3 = layers.Conv2D(filters = 32, kernel_size = 2, strides = (1,1), padding = "same", activation = 'relu')(c2)
         flat = layers.Flatten()(c3)
+
 
         #current green phase layer
         phase_inputs = keras.Input(shape = (self._state_shape[1],))
@@ -194,9 +195,9 @@ class RNNTrainModel(TrainModel):
             elapsed_time_inputs = keras.Input(batch_shape = batch_state_shape[2])
         
         #conv layers        
-        c1 = layers.TimeDistributed(layers.Conv2D(filters = 128, kernel_size = 4, strides = (2,2), padding = "same", activation = 'relu'))(conv_inputs)
-        c2 = layers.TimeDistributed(layers.Conv2D(filters = 128, kernel_size = 4, strides = (2,2), padding = "same", activation = 'relu'))(c1)
-        c3 = layers.TimeDistributed(layers.Conv2D(filters = 64, kernel_size = 2, strides = (1,1), padding = "same", activation = 'relu'))(c2)
+        c1 = layers.TimeDistributed(layers.Conv2D(filters = 32, kernel_size = 2, strides = (2,2), padding = "same", activation = 'relu'))(conv_inputs)
+        c2 = layers.TimeDistributed(layers.Conv2D(filters = 64, kernel_size = 2, strides = (2,2), padding = "same", activation = 'relu'))(c1)
+        c3 = layers.TimeDistributed(layers.Conv2D(filters = 32, kernel_size = 2, strides = (1,1), padding = "same", activation = 'relu'))(c2)
         flat = layers.TimeDistributed(layers.Flatten())(c3)
         
         #combine elapsed time and green time layer
@@ -263,7 +264,7 @@ class RNNTrainModel(TrainModel):
 
 
 
-# TO DO: change input shape if needed
+
 class TestModel:
     def __init__(self, model_path, state_shape):
         self._model = self._load_my_model(model_path)

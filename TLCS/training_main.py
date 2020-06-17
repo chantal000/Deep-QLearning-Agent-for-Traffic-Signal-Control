@@ -24,7 +24,6 @@ from utils import import_train_configuration, set_sumo, set_train_path
 
 
 
-
 if __name__ == "__main__":
 
     config = import_train_configuration(config_file='training_settings.ini')
@@ -35,7 +34,7 @@ if __name__ == "__main__":
 
 #     # SET PARAMETERS (ADD TO CONFIG LATER)
 #     #TO DO: add to config files:
-    sequence_length = 8
+    sequence_length = 15
     
     #SET STATE DIMENSION PARAMETERS
     number_of_cells_per_lane = 10
@@ -52,7 +51,7 @@ if __name__ == "__main__":
 
     
     
-    # TO DO: add penetration rate
+
     TrafficGen = TrafficGenerator(
         config['max_steps'], 
         config['penetration_rate']
@@ -181,7 +180,6 @@ if __name__ == "__main__":
     
     episode = 0
     timestamp_start = datetime.datetime.now()
-    
 
 
 
@@ -214,6 +212,3 @@ if __name__ == "__main__":
     copyfile(src='training_settings.ini', dst=os.path.join(path, 'training_settings.ini'))
 
     Visualization.training_save_data_and_plot(data=Simulation.reward_store, filename='reward', xlabel='Episode', ylabel='Cumulative negative reward')
-    Visualization.training_save_data_and_plot(data=Simulation.cumulative_wait_store, filename='waiting_time', xlabel='Episode', ylabel='Cumulative waiting time [s]')
-    Visualization.training_save_data_and_plot(data=Simulation.avg_queue_length_store, filename='queue', xlabel='Episode', ylabel='Average queue length per step [vehicles]')
-    Visualization.training_save_data_and_plot(data=Simulation.cumulative_delay_store, filename='delay', xlabel='Episode', ylabel='Cumulative delay [s]')

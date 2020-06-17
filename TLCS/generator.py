@@ -25,7 +25,7 @@ class TrafficGenerator:
             cars_generated = 5000
             dynamic = False
         elif scenario_number == 3:
-            cars_generated = 7000
+            cars_generated = 6500
             dynamic = False
         elif scenario_number == 4:
             cars_generated = 2000

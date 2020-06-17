@@ -20,9 +20,12 @@ if __name__ == "__main__":
 
     
     
-    #SET PARAMETERS
+    #SET STATE DIMENSION PARAMETERS  
     number_of_cells_per_lane = 10
-    state_shape = (number_of_cells_per_lane, 8, 1)
+    conv_state_shape = (number_of_cells_per_lane, 8, 2)
+    green_phase_state_shape = 4
+    elapsed_time_state_shape = 1
+    state_shape = [conv_state_shape, green_phase_state_shape, elapsed_time_state_shape]
     
     
     
@@ -74,8 +77,8 @@ if __name__ == "__main__":
     copyfile(src='testing_settings.ini', dst=os.path.join(plot_path, 'testing_settings.ini'))
 
     
-#     all_average_delay = Simulation.average_delay_all_episodes
-    
-    Visualization.testing_save_data_and_plot(data=Simulation.delay_all_episodes, filename='cumulative_delay', xlabel='Simulation step', ylabel='Cumulative vehicle delay [s]')
+    Visualization.testing_save_data_and_plot(data=Simulation.delay_all_episodes, filename='average_delay', xlabel='Simulation step', ylabel='Average vehicle delay [s]')
+    Visualization.testing_save_data_and_plot(data=Simulation.CV_delay_all_episodes, filename='average_CV_delay', xlabel='Simulation step', ylabel='Average connected vehicle delay [s]')
+    Visualization.testing_save_data_and_plot(data=Simulation.RV_delay_all_episodes, filename='average_RV_delay', xlabel='Simulation step', ylabel='Average regular vehicle delay [s]')
     Visualization.testing_save_data_and_plot(data=Simulation.queue_length_all_episodes, filename='queue_length', xlabel='Simulation step', ylabel='Cumulative queue length [vehicles]')
-    Visualization.testing_save_data_and_plot(data=Simulation.wait_all_episodes, filename='cumulative_wait', xlabel='Simulation step', ylabel='Cumulative waiting time [s]')
+    Visualization.testing_save_data_and_plot(data=Simulation.wait_all_episodes, filename='cumulative_wait', xlabel='Simulation step', ylabel='Average waiting time [s]')
