@@ -451,12 +451,13 @@ class VanillaTrainSimulation(TrainSimulation):
                 #update with combination of online and target network
                 current_q[action] = reward + self._gamma * np.amax(q_s_a_d[i])  # update Q(state, action)
                 x_conv[i] = state[0]
-                x_phase[i] = state[1]
+                # x_phase[i] = state[1]
                 x_elapsed[i] = state[2]
                 y[i] = current_q  # Q(state) that includes the updated action value
 
-            self._Model.train_batch([x_conv, x_phase, x_elapsed], y)  # train the NN
-    
+            # self._Model.train_batch([x_conv, x_phase, x_elapsed], y)  # train the NN
+            self._Model.train_batch([x_conv, x_elapsed], y)  # train the NN
+
     
     def _choose_action(self, state, epsilon):
         """
@@ -662,7 +663,6 @@ class RNNTrainSimulation(TrainSimulation):
                     # x[index_sequence][index_step] = state
                     y[index_sequence][index_step] = current_q
             self._Model.train_batch([x_conv, x_phase, x_elapsed], y)  # train the NN
-            # self._Model.train_batch(x, y)  # train the NN
 
 
 

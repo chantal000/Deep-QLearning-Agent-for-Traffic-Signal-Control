@@ -104,17 +104,12 @@ class VanillaTrainModel(TrainModel):
         # print("predict one state shape: ", state.shape)
 
         s0 = np.expand_dims(state[0], axis = 0)
-        s1 = np.expand_dims(state[1], axis = 0)
+        # s1 = np.expand_dims(state[1], axis = 0)
         s2 = np.expand_dims(state[2], axis = 0)
+
         
-        
-        # state = np.expand_dims(state, axis = 0)
-        # return self._model.predict(state)
-        
-        return self._model.predict([s0,s1,s2])
-        # prediction = self._model.predict([s0,s1,s2])
-        # print("predicted chosen action: ", prediction)
-        # return prediction
+        # return self._model.predict([s0,s1,s2])
+        return self._model.predict([s0,s2])
     
     
     
@@ -124,33 +119,16 @@ class VanillaTrainModel(TrainModel):
         """
         #states is a batch with shape (#samples, 3): [conv shape, phase shape, elapsed shape] in each row
         
-        # print("in predict_batch, shape of states: ", states.shape)
-        # print("in predict batch, shape of entries: ", states[:,0].shape, states[:,1].shape)
-        
-        # print("in predict batch, shape of states 1: ", states[:,1])
         
         
         
         s0 = np.concatenate(states[:,0]).reshape((self._batch_size, ) + self._state_shape[0])
-        # print("shapes after reshaping:  s0: ", s0.shape, s0.dtype )
-        
-        
-        s1 = np.concatenate(states[:,1]).reshape((self._batch_size, self._state_shape[1]))
-        # print("shapes after reshaping:  s1: ", s1.shape, s1.dtype)
-        
+        # s1 = np.concatenate(states[:,1]).reshape((self._batch_size, self._state_shape[1]))
         s2 = np.array(states[:,2], dtype=np.float)
-        # print("shapes after reshaping:  s2: ", s2.shape, s2.dtype)
 
-        return self._model.predict([s0,s1,s2])
-        
-        # return self._model.predict(states)
-        
-        
-        # print("states 0 shape: ", states[0].shape)
-        # print("states 1 shape: ", states[1].shape)
-        # print("states 2 shape: ", states[2].shape)
-        
-        # return self._model.predict([states[0], states[1], states[2]])
+        # return self._model.predict([s0,s1,s2])
+        return self._model.predict([s0,s2])
+       
 
 
     
