@@ -177,8 +177,8 @@ class Simulation:
                     #averaged normalized cell speed: divide summed speed in each cell by the number of cars in that cell and then normalize with the allowed max_speed
                     conv_state[lane_cell][lane_group][1] = (conv_state[lane_cell][lane_group][1] / number_cars_in_cell ) / 13.89
                 
-                    #calculate the cell occupancy/density per cell: #cars / #max cars (take into account lane multiplier!!)
-                    conv_state[lane_cell][lane_group][0] = number_cars_in_cell / (self._max_cars_per_lane_cell[lane_cell] * lane_multiplier) 
+                    #boolean occupancy
+                    conv_state[lane_cell][lane_group][0] = 1
 
         return [conv_state, green_phase_state, elapsed_time_state]
 
@@ -223,10 +223,6 @@ class TrainSimulation(Simulation):
         self._Memory = Memory
         self._gamma = gamma
         self._reward_store = []
-        
-        self._train_iteration = 0
-        
-        
         # self._cumulative_wait_store = []
         # self._avg_queue_length_store = []
         # self._cumulative_delay_store = []
@@ -236,7 +232,7 @@ class TrainSimulation(Simulation):
         
         #order of scenarios: 3x constant (super low, undersaturated, saturated)
         # and 3x dynamic saturated peak
-        self._scenario_list = [3,0,3,1,3,2]
+        self._scenario_list = [3,0,3,1,3,2]  
      
 
     def _pick_next_scenario(self):
@@ -383,14 +379,15 @@ class VanillaTrainSimulation(TrainSimulation):
         # start training after the full episode is done
         print("Training...")
         start_time = timeit.default_timer()
+        train_iteration = 0
         
         #train for "training epochs" times --> only updates the online Model (target model stays unchanged)
         for _ in range(self._training_epochs):   #epoch = one forward pass and one backward pass of all the training examples, in the neural network terminology. 
             #start one training round
             self._replay()
             
-            self._train_iteration += 1
-            if self._train_iteration % self._copy_step == 0:
+            train_iteration += 1
+            if train_iteration % self._copy_step == 0:
                 self._copy_online_into_target_model()
             
         training_time = round(timeit.default_timer() - start_time, 1)

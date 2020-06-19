@@ -93,7 +93,7 @@ class Simulation:
         #initialize state arrays
         conv_state = np.zeros(self._Model._state_shape[0])
         green_phase_state = np.zeros(self._Model._state_shape[1])
-        green_phase_state[self._current_phase] = 1  #one-hot encoded current green phase
+        # green_phase_state[self._current_phase] = 1  #one-hot encoded current green phase
         elapsed_time_state = self._elapsed_time_since_phase_start
         
 
@@ -175,10 +175,32 @@ class Simulation:
                         lane_multiplier = 1
                 
                     #averaged normalized cell speed: divide summed speed in each cell by the number of cars in that cell and then normalize with the allowed max_speed
-                    conv_state[lane_cell][lane_group][1] = (conv_state[lane_cell][lane_group][1] / number_cars_in_cell ) / 13.89
+                    conv_state[lane_cell][lane_group][1] = -(conv_state[lane_cell][lane_group][1] / number_cars_in_cell ) / 13.89
                 
                     #calculate the cell occupancy/density per cell: #cars / #max cars (take into account lane multiplier!!)
-                    conv_state[lane_cell][lane_group][0] = number_cars_in_cell / (self._max_cars_per_lane_cell[lane_cell] * lane_multiplier) 
+                    conv_state[lane_cell][lane_group][0] = -number_cars_in_cell / (self._max_cars_per_lane_cell[lane_cell] * lane_multiplier) 
+
+        
+        #encode the current traffic phase in the conv image (the lanes which currently have green will get a + sign, the others a - sign)
+        # i made all conv fields negative until now (see - sign above) and now to make it positive i have to multiply it with -1 again
+        if self._current_phase == 0:
+            for lane_cell in range(10):
+                conv_state[lane_cell][2] =  - conv_state[lane_cell][2]
+                conv_state[lane_cell][6] =  - conv_state[lane_cell][6]
+        if self._current_phase == 1:
+            for lane_cell in range(10):
+                conv_state[lane_cell][3] =  - conv_state[lane_cell][3]
+                conv_state[lane_cell][7] =  - conv_state[lane_cell][7]
+        if self._current_phase == 2:
+            for lane_cell in range(10):
+                conv_state[lane_cell][0] =  - conv_state[lane_cell][0]
+                conv_state[lane_cell][4] =  - conv_state[lane_cell][4]
+        if self._current_phase == 3:
+            for lane_cell in range(10):
+                conv_state[lane_cell][1] =  - conv_state[lane_cell][1]
+                conv_state[lane_cell][5] =  - conv_state[lane_cell][5]
+        
+
 
         return [conv_state, green_phase_state, elapsed_time_state]
 
