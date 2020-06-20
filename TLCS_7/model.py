@@ -72,15 +72,15 @@ class VanillaTrainModel(TrainModel):
 
 
         #current green phase layer
-        phase_inputs = keras.Input(shape = (self._state_shape[1],))
+        # phase_inputs = keras.Input(shape = (self._state_shape[1],))
         
         #elapsed green time layer
         elapsed_time_inputs = keras.Input(shape = (self._state_shape[2],))
         
         
         #combine elapsed time and green time layer
-        combined_green = layers.concatenate([phase_inputs, elapsed_time_inputs])
-        green_dense = layers.Dense(10, activation='relu')(combined_green)
+        # combined_green = layers.concatenate([phase_inputs, elapsed_time_inputs])
+        green_dense = layers.Dense(10, activation='relu')(elapsed_time_inputs)
         
         #combine green layer with conv layer
         all_combined = layers.concatenate([green_dense, flat])
@@ -88,7 +88,7 @@ class VanillaTrainModel(TrainModel):
         dense = layers.Dense(16, activation='relu')(dense)
         outputs = layers.Dense(self._output_dim, activation='linear')(dense)
         
-        model = keras.Model(inputs = [conv_inputs, phase_inputs, elapsed_time_inputs], outputs = outputs, name='simple_CNN')       
+        model = keras.Model(inputs = [conv_inputs, elapsed_time_inputs], outputs = outputs, name='simple_CNN')       
         model.compile(loss=losses.mean_squared_error, optimizer=Adam(lr=self._learning_rate))
         
         return model
