@@ -263,20 +263,14 @@ class TestModel:
         #if it is a recurrent model:
         if len(self._model.layers[0].input.shape) > len(self._state_shape)+1:
             s0 = np.expand_dims(state[0], axis = (0,1))
-            s1 = np.expand_dims(state[1], axis = (0,1))
             s2 = np.expand_dims((state[2], ), axis = (0,1))  
         #if it is not a recurrent model
         else:
             s0 = np.expand_dims(state[0], axis = 0)
-            s1 = np.expand_dims(state[1], axis = 0)
             s2 = np.expand_dims(state[2], axis = 0)
          
-         
-            
-        # state = np.expand_dims(state, axis = 0)
-        # return self._model.predict(state)
-
-        return self._model.predict([s0,s1,s2])
+        
+        return self._model.predict([s0,s2])
         
         
         

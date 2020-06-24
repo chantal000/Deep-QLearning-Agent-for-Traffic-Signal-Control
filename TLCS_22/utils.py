@@ -95,14 +95,14 @@ def set_train_path(models_path_name):
     return data_path 
 
 
-def set_test_path(models_path_name, model_n):
+def set_test_path(models_path_name, model_n, scenario_number):
     """
     Returns a model path that identifies the model number provided as argument and a newly created 'test' path
     """
     model_folder_path = os.path.join(os.getcwd(), models_path_name, 'model_'+str(model_n), '')
 
     if os.path.isdir(model_folder_path):    
-        plot_path = os.path.join(model_folder_path, 'test', '')
+        plot_path = os.path.join(model_folder_path, 'test_scenario_'+str(scenario_number), '')
         os.makedirs(os.path.dirname(plot_path), exist_ok=True)
         return model_folder_path, plot_path
     else: 
