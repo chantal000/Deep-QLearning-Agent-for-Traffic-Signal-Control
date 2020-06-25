@@ -199,6 +199,8 @@ if __name__ == "__main__":
     print("\n----- Start time:", timestamp_start)
     print("----- End time:", datetime.datetime.now())
     print("----- Session info saved at:", path)
+    
+    print("This is model 1")
 
 
 
