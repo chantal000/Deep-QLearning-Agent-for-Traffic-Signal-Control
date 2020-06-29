@@ -1,5 +1,6 @@
 import traci
 import timeit
+import numpy as np
 
 class FixedTimeTestSimulation:
     def __init__(self, TrafficGen, sumo_cmd, max_steps, fixed_green_time, yellow_duration, num_actions, scenario_number):

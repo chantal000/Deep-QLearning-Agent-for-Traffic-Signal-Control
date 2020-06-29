@@ -222,7 +222,7 @@ class Visualization:
         
 
         #plot the means in white
-        plt.plot(steps, mean, color="black", lw=2)  
+        plt.plot(steps, median, color="black", lw=2)  
 
         fig = plt.gcf()
         fig.savefig(os.path.join(self._path, 'plot_'+filename+'.png'), dpi=self._dpi)
