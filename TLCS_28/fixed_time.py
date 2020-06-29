@@ -90,12 +90,12 @@ class FixedTimeTestSimulation:
         if number_of_CV > 0:    
             average_CV_delay = total_CV_delay / number_of_CV
         else:
-            average_CV_delay = 0
+            average_CV_delay = np.nan
             
         if number_of_RV > 0:    
             average_RV_delay = total_RV_delay / number_of_RV
         else:
-            average_RV_delay = 0
+            average_RV_delay = np.nan
 
         return average_delay, average_CV_delay, average_RV_delay
 

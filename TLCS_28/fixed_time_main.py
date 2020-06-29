@@ -74,8 +74,8 @@ if __name__ == "__main__":
 
 
     
-    Visualization.testing_save_data_and_plot(data=Simulation.delay_all_episodes, filename='average_delay', xlabel='Simulation step', ylabel='Average vehicle delay [s]')
-    Visualization.testing_save_data_and_plot(data=Simulation.CV_delay_all_episodes, filename='average_CV_delay', xlabel='Simulation step', ylabel='Average connected vehicle delay [s]')
-    Visualization.testing_save_data_and_plot(data=Simulation.RV_delay_all_episodes, filename='average_RV_delay', xlabel='Simulation step', ylabel='Average regular vehicle delay [s]')
-    Visualization.testing_save_data_and_plot(data=Simulation.queue_length_all_episodes, filename='queue_length', xlabel='Simulation step', ylabel='Cumulative queue length [vehicles]')
-    Visualization.testing_save_data_and_plot(data=Simulation.wait_all_episodes, filename='cumulative_wait', xlabel='Simulation step', ylabel='Average waiting time [s]')
+    Visualization.testing_save_data_and_plot_fixed(data=Simulation.delay_all_episodes, filename='average_delay', xlabel='Simulation step', ylabel='Average vehicle delay [s]')
+    Visualization.testing_save_data_and_plot_fixed(data=Simulation.CV_delay_all_episodes, filename='average_CV_delay', xlabel='Simulation step', ylabel='Average connected vehicle delay [s]')
+    Visualization.testing_save_data_and_plot_fixed(data=Simulation.RV_delay_all_episodes, filename='average_RV_delay', xlabel='Simulation step', ylabel='Average regular vehicle delay [s]')
+    Visualization.testing_save_data_and_plot_fixed(data=Simulation.queue_length_all_episodes, filename='queue_length', xlabel='Simulation step', ylabel='Cumulative queue length [vehicles]')
+    Visualization.testing_save_data_and_plot_fixed(data=Simulation.wait_all_episodes, filename='cumulative_wait', xlabel='Simulation step', ylabel='Average waiting time [s]')
