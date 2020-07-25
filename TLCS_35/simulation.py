@@ -546,8 +546,8 @@ class VanillaTrainSimulation(TrainSimulation):
                         
             self._greedy_results_list.append(self._sum_neg_reward)
 
-            self._save_greedy_episode_stats()
-            traci.close()        
+            traci.close()   
+        self._save_greedy_episode_stats()
     
     
     

@@ -64,6 +64,38 @@ class Visualization:
         """
         with open(os.path.join(self._path, 'plot_'+filename + '_data.txt'), "w") as file:
             file.writelines('\t'.join(str(j) for j in i) + '\n' for i in data)
+            
+        data = np.array(data)
+        
+        number_runs = len(data)
+    
+        min_val = np.amin(data)
+        max_val = np.amax(data)
+        
+        # PLOT 
+        plt.style.use('ggplot')
+        plt.rcParams.update({'font.size': 14})  # set bigger font size
+        fig, ax = plt.subplots()
+        plt.title("Total reward per episode when only using greedy policies")
+        
+        
+        plt.plot(episodes, data[:,0], c='orange', label="low traffic scenario")
+        plt.plot(episodes, data[:,1], c='red', label="medium traffic scenario")
+        plt.plot(episodes, data[:,2], c='green', label="high traffic scenario")
+        plt.plot(episodes, data[:,3], c='blue', label="dynamic traffic scenario")
+        
+        
+        legend = ax.legend(loc='best', shadow=True, fontsize='medium')
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+
+        plt.margins(0)
+        plt.ylim(min_val - 0.05 * abs(min_val), max_val + 0.05 * abs(max_val))
+        fig = plt.gcf()
+        fig.set_size_inches(20, 11.25)
+        
+        fig.savefig(os.path.join(self._path, 'plot_'+filename+'.png'), dpi=self._dpi)
+        plt.close("all")
         
         
                     
