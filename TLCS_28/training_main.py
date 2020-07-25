@@ -214,3 +214,7 @@ if __name__ == "__main__":
     copyfile(src='training_settings.ini', dst=os.path.join(path, 'training_settings.ini'))
 
     Visualization.training_save_data_and_plot(data=Simulation.reward_store, filename='reward', xlabel='Episode', ylabel='Cumulative negative reward')
+    Visualization.training_save_data_and_plot_greedy_episodes(data=Simulation.testing_reward_store, filename='greedy_reward', xlabel='Episode', ylabel='Cumulative negative reward')
+
+
+

@@ -58,6 +58,13 @@ class Visualization:
         fig.savefig(os.path.join(self._path, 'plot_'+filename+'.png'), dpi=self._dpi)
         plt.close("all")
 
+    def training_save_data_and_plot_greedy_episodes(self, data, filename, xlabel, ylabel):
+        """
+        Produce a plot of performance of the agent over the session and save the relative data to txt
+        """
+        with open(os.path.join(self._path, 'plot_'+filename + '_data.txt'), "w") as file:
+            file.writelines('\t'.join(str(j) for j in i) + '\n' for i in data)
+        
         
                     
                     

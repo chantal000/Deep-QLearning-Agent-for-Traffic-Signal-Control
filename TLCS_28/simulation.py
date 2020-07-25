@@ -253,6 +253,10 @@ class TrainSimulation(Simulation):
         #order of scenarios: 3x constant (super low, undersaturated, saturated)
         # and 3x dynamic saturated peak
         self._scenario_list = [3,0,3,1,3,2]
+        
+        #list to test scenarios
+        self.testing_reward_store = []
+        
      
 
     def _pick_next_scenario(self):
@@ -294,6 +298,17 @@ class TrainSimulation(Simulation):
         # self._cumulative_wait_store.append(self._sum_waiting_time)  # total number of seconds waited by cars in this episode
         # self._avg_queue_length_store.append(self._sum_queue_length / self._max_steps)  # average number of queued cars per step, in this episode
         # self._cumulative_delay_store.append(self._sum_delay) #total seconds delay by all vehicles in this episode
+
+    def _save_greedy_episode_stats(self):
+        """
+        Save the stats of the greedy episodes to plot the graphs at the end of the session
+        """
+        self.testing_reward_store.append(self._greedy_results_list)  # how much negative reward in this episode
+
+
+        
+
+
 
 
     @property
@@ -389,7 +404,8 @@ class VanillaTrainSimulation(TrainSimulation):
         traci.close()        
         simulation_time = round(timeit.default_timer() - start_time, 1)
 
-
+    
+        #TRAINING
         # start training after the full episode is done
         print("Training...")
         start_time = timeit.default_timer()
@@ -402,8 +418,17 @@ class VanillaTrainSimulation(TrainSimulation):
             self._train_iteration += 1
             if self._train_iteration % self._copy_step == 0:
                 self._copy_online_into_target_model()
-            
-        training_time = round(timeit.default_timer() - start_time, 1)
+                
+        training_time = round(timeit.default_timer() - start_time, 1)        
+    
+    
+    
+        #TESTING EPSIODES (PURE GREEDY) EVERY X EPISODES
+        update_every_x_episodes = 15    
+        if episode % update_every_x_episodes == 0:
+            print("Testing ...")
+            self._greedy_run(episode)
+
 
         return simulation_time, training_time
     
@@ -457,10 +482,76 @@ class VanillaTrainSimulation(TrainSimulation):
             # print("predicted action: ", prediction)
             # return prediction
             return np.argmax(self._Model.predict_one(state)) # the best action given the current state
+            
+    def _choose_greedy_action(self, state):
+        """
+        Do an exploitative action
+        """
+        return np.argmax(self._Model.predict_one(state)) # the best action given the current state
 
 
+    def _greedy_run(self, episode):
+    
+        self._greedy_results_list = []
+    
+        for scenario_number in range(4):
+            self._TrafficGen.generate_routefile(episode*2000, scenario_number)
+            traci.start(self._sumo_cmd)
+
+            # inits
+            self._step = 0
+            self._sum_neg_reward = 0
+
+            old_total_wait = 0
+            old_state = -1
+            old_action = -1
+            self._current_phase = -1 #dummy
+            self._elapsed_time_since_phase_start = 0
+            
+            
+            
+            while self._step < self._max_steps:
+                # get current state of the intersection (shape: conv, current green phase, elapsed time since beginning green phase)
+                current_state = self._get_state()
+
+                # calculate reward of previous action: (change in cumulative delay between actions)
+                # delay time = seconds delay accumulated for all vehicles in incoming lanes
+                current_total_wait = self._get_waiting_times()
+                reward = old_total_wait - current_total_wait
+
+                # saving the data into the memory
+                if self._step != 0:
+                    self._Memory.add_sample((old_state, old_action, reward, current_state))
+                        
+                # choose the light phase to activate, based on the current state of the intersection
+                action = self._choose_greedy_action(current_state)
+
+                # if the chosen phase is different from the last phase, activate the yellow phase
+                if self._step != 0 and old_action != action:
+                    self._set_yellow_phase(old_action)
+                    self._simulate(self._yellow_duration)
+
+                # execute the phase selected before
+                self._set_green_phase(action)
+                self._simulate(self._green_duration)
+
+                # saving variables for later & accumulate reward
+                old_state = current_state
+                old_action = action
+                old_total_wait = current_total_wait
+
+                # saving only the meaningful reward to better see if the agent is behaving correctly
+                if reward < 0:
+                    self._sum_neg_reward += reward
+                        
+            self._greedy_results_list.append(self._sum_neg_reward)
+
+            traci.close() 
+        self._save_greedy_episode_stats()
     
     
+    
+
     
     
     

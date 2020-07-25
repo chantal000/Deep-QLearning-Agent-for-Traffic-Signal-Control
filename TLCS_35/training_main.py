@@ -200,7 +200,7 @@ if __name__ == "__main__":
     print("----- End time:", datetime.datetime.now())
     print("----- Session info saved at:", path)
     
-    print("This is model 28")
+    print("This is model 35")
 
 
 
