@@ -424,7 +424,7 @@ class VanillaTrainSimulation(TrainSimulation):
     
     
         #TESTING EPSIODES (PURE GREEDY) EVERY X EPISODES
-        update_every_x_episodes = 15    
+        update_every_x_episodes = 10    
         if episode % update_every_x_episodes == 0:
             print("Testing ...")
             self._greedy_run()

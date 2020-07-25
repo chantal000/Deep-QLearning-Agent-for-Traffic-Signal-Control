@@ -67,6 +67,8 @@ class Visualization:
             
         data = np.array(data)
         
+        episodes_array = np.arange(0,number_runs*10,10)    #may need to change the 15!
+        
         number_runs = len(data)
     
         min_val = np.amin(data)
@@ -79,10 +81,10 @@ class Visualization:
         plt.title("Total reward per episode when only using greedy policies")
         
         
-        plt.plot(episodes, data[:,0], c='orange', label="low traffic scenario")
-        plt.plot(episodes, data[:,1], c='red', label="medium traffic scenario")
-        plt.plot(episodes, data[:,2], c='green', label="high traffic scenario")
-        plt.plot(episodes, data[:,3], c='blue', label="dynamic traffic scenario")
+        plt.plot(episodes_array, data[:,0], c='orange', label="low traffic scenario")
+        plt.plot(episodes_array, data[:,1], c='red', label="medium traffic scenario")
+        plt.plot(episodes_array, data[:,2], c='green', label="high traffic scenario")
+        plt.plot(episodes_array, data[:,3], c='blue', label="dynamic traffic scenario")
         
         
         legend = ax.legend(loc='best', shadow=True, fontsize='medium')
