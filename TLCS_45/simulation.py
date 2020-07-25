@@ -427,7 +427,7 @@ class VanillaTrainSimulation(TrainSimulation):
         update_every_x_episodes = 10    
         if episode % update_every_x_episodes == 0:
             print("Testing ...")
-            self._greedy_run()
+            self._greedy_run(episode)
 
 
         return simulation_time, training_time
@@ -490,7 +490,7 @@ class VanillaTrainSimulation(TrainSimulation):
         return np.argmax(self._Model.predict_one(state)) # the best action given the current state
 
 
-    def _greedy_run(self):
+    def _greedy_run(self,episode):
     
         self._greedy_results_list = []
     

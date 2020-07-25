@@ -67,7 +67,7 @@ class Visualization:
             
         data = np.array(data)
         
-        episodes_array = np.arange(0,number_runs*10,10)    #may need to change the 15!
+        episodes_array = np.arange(0,number_runs*10,10)    #may need to change the value!
         
         number_runs = len(data)
     
