@@ -11,7 +11,6 @@ from tensorflow.keras.utils import plot_model
 from simulation import Simulation, TrainSimulation, VanillaTrainSimulation, RNNTrainSimulation
 from generator import TrafficGenerator
 from memory import Memory, NormalMemory, SequenceMemory
-# from model import TrainModel
 from model import *
 from visualization import Visualization
 from utils import import_train_configuration, set_sumo, set_train_path
@@ -101,7 +100,8 @@ if __name__ == "__main__":
             config['yellow_duration'],
             config['num_actions'],
             config['training_epochs'],
-            config['copy_step']
+            config['copy_step'],
+            config['greedy_episode_every_x_steps']
         )
 
         
@@ -161,6 +161,7 @@ if __name__ == "__main__":
             config['num_actions'],
             config['training_epochs'],
             config['copy_step'],
+            config['greedy_episode_every_x_steps'],
             PredictModel
         )
 
@@ -214,7 +215,7 @@ if __name__ == "__main__":
     copyfile(src='training_settings.ini', dst=os.path.join(path, 'training_settings.ini'))
 
     Visualization.training_save_data_and_plot(data=Simulation.reward_store, filename='reward', xlabel='Episode', ylabel='Cumulative negative reward')
-    Visualization.training_save_data_and_plot_greedy_episodes(data=Simulation.testing_reward_store, filename='greedy_reward', xlabel='Episode', ylabel='Cumulative negative reward')
+    Visualization.training_save_data_and_plot_greedy_episodes(data=Simulation.testing_reward_store, filename='greedy_reward', xlabel='Episode', ylabel='Cumulative negative reward', episode_update_interval=config['greedy_episode_every_x_steps'])
 
 
 
